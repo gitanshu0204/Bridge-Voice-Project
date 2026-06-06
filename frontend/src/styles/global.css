@@ -1,1 +1,43 @@
+:root {
+  --bg-950: #030712;
+  --bg-900: #111827;
+  --bg-800: #1f2937;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --border-color: #374151;
+}
+
+[data-theme="light"] {
+  --bg-950: #f1f5f9;
+  --bg-900: #ffffff;
+  --bg-800: #f8fafc;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border-color: #e2e8f0;
+}
+
+[data-theme="light"] body {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+[data-theme="light"] .bg-gray-950 { background-color: #f1f5f9 !important; }
+[data-theme="light"] .bg-gray-900 { background-color: #ffffff !important; }
+[data-theme="light"] .bg-gray-800 { background-color: #f1f5f9 !important; }
+[data-theme="light"] .bg-gray-700 { background-color: #e2e8f0 !important; }
+[data-theme="light"] .text-white { color: #1e293b !important; }
+[data-theme="light"] .text-gray-200 { color: #1e293b !important; }
+[data-theme="light"] .text-gray-300 { color: #334155 !important; }
+[data-theme="light"] .text-gray-400 { color: #475569 !important; }
+[data-theme="light"] .text-gray-500 { color: #64748b !important; }
+[data-theme="light"] .border-gray-800 { border-color: #e2e8f0 !important; }
+[data-theme="light"] .border-gray-700 { border-color: #cbd5e1 !important; }
+[data-theme="light"] .placeholder-gray-500::placeholder { color: #94a3b8 !important; }
+[data-theme="light"] .placeholder-gray-600::placeholder { color: #94a3b8 !important; }
+
+/* Font sizes */
+[data-fontsize="small"] { font-size: 13px !important; }
+[data-fontsize="medium"] { font-size: 15px !important; }
+[data-fontsize="large"] { font-size: 17px !important; }
+[data-fontsize="xlarge"] { font-size: 19px !important; }
 @import "tailwindcss";

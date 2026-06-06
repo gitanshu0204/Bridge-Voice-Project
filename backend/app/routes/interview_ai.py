@@ -1,0 +1,112 @@
+from fastapi import APIRouter
+from pydantic import BaseModel
+from groq import Groq
+import os
+import json
+
+client = Groq(api_key=os.getenv("GROQ_API_KEY", ""))
+router = APIRouter()
+
+class InterviewQuestionsRequest(BaseModel):
+    job_title: str
+    difficulty: str = "Medium"
+
+class InterviewFeedbackRequest(BaseModel):
+    job_title: str
+    question: str
+    answer: str
+
+@router.post("/interview/questions")
+async def generate_questions(data: InterviewQuestionsRequest):
+    try:
+        prompt = f"""You are an expert interview coach.
+
+Generate exactly 5 realistic interview questions for: {data.job_title}
+Difficulty level: {data.difficulty}
+
+Respond ONLY with a valid JSON array:
+[
+  {{
+    "question": "Tell me about yourself and your experience.",
+    "tip": "Use the STAR method: Situation, Task, Action, Result",
+    "type": "General"
+  }}
+]
+
+Make questions realistic and commonly asked in Canadian job interviews.
+Include a mix of: behavioral, situational and skill-based questions."""
+
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000
+        )
+
+        response_text = completion.choices[0].message.content.strip()
+        if response_text.startswith('```'):
+            response_text = response_text.split('```')[1]
+            if response_text.startswith('json'):
+                response_text = response_text[4:]
+        questions = json.loads(response_text.strip())
+        return {"questions": questions[:5]}
+
+    except Exception as e:
+        print(f"Interview questions error: {e}")
+        return {"questions": [
+            {"question": "Tell me about yourself.", "tip": "Keep it professional and relevant", "type": "General"},
+            {"question": "What are your greatest strengths?", "tip": "Give specific examples", "type": "Behavioral"},
+            {"question": "Why do you want this job?", "tip": "Research the company first", "type": "Motivational"},
+            {"question": "Where do you see yourself in 5 years?", "tip": "Show ambition but be realistic", "type": "Future"},
+            {"question": "Do you have any questions for us?", "tip": "Always prepare 2-3 questions", "type": "Closing"},
+        ]}
+
+@router.post("/interview/feedback")
+async def interview_feedback(data: InterviewFeedbackRequest):
+    try:
+        prompt = f"""You are an expert Canadian interview coach.
+
+Job: {data.job_title}
+Interview Question: "{data.question}"
+Candidate's Answer: "{data.answer}"
+
+Evaluate this interview answer and provide:
+1. Score out of 100
+2. What they did well (2 points)
+3. What to improve (2 points)
+4. A better sample answer (2-3 sentences)
+5. One key tip for Canadian interviews
+
+Respond in this exact JSON format:
+{{
+  "score": 75,
+  "feedback": "Overall encouraging feedback in 1-2 sentences",
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["improvement 1", "improvement 2"],
+  "sample_answer": "Here is a stronger version of this answer...",
+  "canadian_tip": "In Canadian workplaces specifically..."
+}}"""
+
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500
+        )
+
+        response_text = completion.choices[0].message.content.strip()
+        if response_text.startswith('```'):
+            response_text = response_text.split('```')[1]
+            if response_text.startswith('json'):
+                response_text = response_text[4:]
+        result = json.loads(response_text.strip())
+        return result
+
+    except Exception as e:
+        print(f"Interview feedback error: {e}")
+        return {
+            "score": 70,
+            "feedback": "Good effort! Keep practicing to improve your interview skills.",
+            "strengths": ["You attempted the question", "You showed willingness to try"],
+            "improvements": ["Add more specific examples", "Use the STAR method"],
+            "sample_answer": "Try to structure your answer with a specific situation, what you did, and the result.",
+            "canadian_tip": "Canadian interviewers appreciate honesty and specific real-life examples."
+        }

@@ -11,6 +11,9 @@ from app.routes import pronunciation
 from app.routes import daily_challenge
 from app.routes import conversations
 from app.routes import phrase_practice
+from app.routes import quiz_ai
+from app.routes import culture_guide
+from app.routes import interview_ai
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -33,6 +36,9 @@ app.include_router(pronunciation.router, prefix="/api", tags=["pronunciation"])
 app.include_router(daily_challenge.router, prefix="/api", tags=["daily-challenge"])
 app.include_router(conversations.router, prefix="/api", tags=["conversations"])
 app.include_router(phrase_practice.router, prefix="/api", tags=["phrase-practice"])
+app.include_router(quiz_ai.router, prefix="/api", tags=["quiz-ai"])
+app.include_router(culture_guide.router, prefix="/api", tags=["culture-guide"])
+app.include_router(interview_ai.router, prefix="/api", tags=["interview-ai"])
 
 @app.get("/")
 def root():
