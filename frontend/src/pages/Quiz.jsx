@@ -168,7 +168,6 @@ function Quiz() {
     setShowAnswer(true)
 
     const correct = option === quizQuestions[currentQ].correct
-
     if (correct) {
       setScore(prev => prev + 1)
     } else {
@@ -233,24 +232,53 @@ function Quiz() {
       <div className="max-w-2xl mx-auto space-y-6">
 
         {stage === 'levels' && (
-          <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold">🧠 Vocabulary Quiz</h2>
-              <p className="text-gray-400 mt-1">Progress through 5 levels of English mastery!</p>
+          <div className="space-y-6">
+
+            {/* Hero */}
+            <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-gray-900 to-gray-900 opacity-60"></div>
+              <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
+              <div className="relative p-8 flex justify-between items-center">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></span>
+                    <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">5 Levels • AI Powered</span>
+                  </div>
+                  <h2 className="text-3xl font-bold text-white mb-2">Vocabulary Quiz</h2>
+                  <p className="text-gray-400 text-sm max-w-md leading-relaxed">
+                    Progress through 5 levels of English mastery with AI-generated questions tailored to your native language.
+                  </p>
+                  <div className="flex items-center gap-4 mt-4">
+                    {[
+                      { value: '5', label: 'Levels' },
+                      { value: 'AI', label: 'Questions' },
+                      { value: '75+', label: 'Words' },
+                    ].map((stat, i) => (
+                      <div key={i}>
+                        <p className="text-lg font-bold text-purple-400">{stat.value}</p>
+                        <p className="text-gray-500 text-xs">{stat.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="hidden md:block text-8xl opacity-10">🧠</div>
+              </div>
             </div>
 
             {/* Native Language Selector */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6">
-              <p className="text-sm font-semibold text-gray-300 mb-3">🌍 Your Native Language (for AI-powered quiz):</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-800">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Your Native Language (for AI Quiz)</p>
+              </div>
+              <div className="p-4 flex flex-wrap gap-2">
                 {['Hindi', 'Punjabi', 'Mandarin', 'Arabic', 'Spanish', 'French', 'Tagalog', 'Urdu'].map(lang => (
                   <button
                     key={lang}
                     onClick={() => setNativeLanguage(lang)}
-                    className={`px-3 py-1.5 rounded-xl text-sm font-medium transition ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${
                       nativeLanguage === lang
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                        : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white'
+                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                        : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
                     }`}
                   >
                     {lang}
@@ -260,47 +288,59 @@ function Quiz() {
             </div>
 
             {/* Level Cards */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {levels.map((level) => {
                 const unlocked = isLevelUnlocked(level.level)
                 const completed = completedLevels[level.level]
                 return (
-                  <div key={level.level} className={`bg-gray-900 rounded-2xl p-5 border ${unlocked ? level.borderColor : 'border-gray-800'} ${!unlocked && 'opacity-60'}`}>
-                    <div className="flex justify-between items-center">
+                  <div
+                    key={level.level}
+                    className={`bg-gray-900 border rounded-2xl overflow-hidden transition ${
+                      unlocked ? 'border-gray-800 hover:border-gray-700' : 'border-gray-800 opacity-60'
+                    }`}
+                  >
+                    <div className="p-5 flex justify-between items-center">
                       <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${unlocked ? level.color : 'from-gray-700 to-gray-600'} flex items-center justify-center text-xl shadow-lg`}>
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${
+                          unlocked ? level.color : 'from-gray-700 to-gray-600'
+                        } flex items-center justify-center text-xl shadow-lg`}>
                           {unlocked ? level.icon : '🔒'}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-200">Level {level.level} — {level.title}</p>
-                          <p className="text-sm text-gray-500">{level.desc}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-white">Level {level.level} — {level.title}</p>
+                            {completed?.passed && (
+                              <span className="text-xs bg-green-900 bg-opacity-30 border border-green-800 text-green-400 px-2 py-0.5 rounded-full">
+                                ✅ Passed
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-gray-500 text-xs mt-0.5">{level.desc}</p>
                           {completed && (
-                            <p className={`text-xs font-semibold mt-1 ${completed.passed ? 'text-green-400' : 'text-orange-400'}`}>
-                              {completed.passed ? `✅ Passed — ${completed.score}/10` : `❌ Score: ${completed.score}/10`}
+                            <p className={`text-xs font-medium mt-1 ${completed.passed ? 'text-green-400' : 'text-yellow-400'}`}>
+                              Best score: {completed.score}/10
                             </p>
                           )}
                         </div>
                       </div>
 
-                      {unlocked && (
+                      {unlocked ? (
                         <div className="flex gap-2">
                           <button
                             onClick={() => startQuiz(level, false)}
-                            className="bg-gray-800 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white px-3 py-2 rounded-xl transition text-xs font-medium"
+                            className="border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white px-3 py-2 rounded-xl transition text-xs font-medium"
                           >
                             📝 Classic
                           </button>
                           <button
                             onClick={() => startQuiz(level, true)}
-                            className={`bg-gradient-to-r ${level.color} text-white px-3 py-2 rounded-xl hover:opacity-90 transition font-medium text-xs flex items-center gap-1`}
+                            className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded-xl transition text-xs font-bold shadow-lg shadow-purple-900/40"
                           >
                             🤖 AI Quiz
                           </button>
                         </div>
-                      )}
-
-                      {!unlocked && (
-                        <p className="text-sm text-gray-600">Pass Level {level.level - 1} first</p>
+                      ) : (
+                        <p className="text-xs text-gray-600">Pass Level {level.level - 1} first</p>
                       )}
                     </div>
                   </div>
@@ -308,82 +348,91 @@ function Quiz() {
               })}
             </div>
 
-            <div className="bg-purple-900 bg-opacity-20 border border-purple-700 rounded-2xl p-4 mt-4">
-              <p className="text-purple-300 font-semibold text-sm mb-1">🤖 AI Quiz vs Classic Quiz</p>
-              <p className="text-gray-400 text-xs">
-                <strong className="text-white">Classic:</strong> Fixed questions from our word bank<br/>
-                <strong className="text-white">AI Quiz:</strong> Groq AI generates fresh questions every time, personalized to your native language with explanations for wrong answers!
-              </p>
+            {/* Info */}
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+              <p className="text-sm font-semibold text-gray-300 mb-2">🤖 AI Quiz vs Classic Quiz</p>
+              <div className="space-y-1.5">
+                <p className="text-gray-500 text-xs">
+                  <span className="text-white font-medium">Classic:</span> Fixed questions from our word bank
+                </p>
+                <p className="text-gray-500 text-xs">
+                  <span className="text-white font-medium">AI Quiz:</span> Groq AI generates fresh questions every time, personalized to your native language with explanations for wrong answers!
+                </p>
+              </div>
             </div>
           </div>
         )}
 
         {generating && (
-          <div className="text-center py-16">
-            <div className="flex gap-2 justify-center mb-4">
-              <div className="w-3 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-3 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-            </div>
-            <p className="text-gray-400 font-medium">🤖 Groq AI is generating your personalized quiz...</p>
-            <p className="text-gray-600 text-sm mt-2">Creating questions tailored for {nativeLanguage} speakers</p>
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-16 text-center">
+            <div className="w-12 h-12 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-300 font-medium">Generating your personalized quiz...</p>
+            <p className="text-gray-600 text-sm mt-1">Creating questions for {nativeLanguage} speakers</p>
           </div>
         )}
 
         {stage === 'quiz' && quizQuestions.length > 0 && !generating && (
           <div className="space-y-4">
 
-            {/* Progress Bar */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
-              <div className="flex justify-between items-center mb-2">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-gray-400 text-sm">
-                    Level {activeLevel} — {currentLevelData?.title} | Q{currentQ + 1}/10
-                  </p>
-                  {aiGenerated && (
-                    <span className="bg-purple-900 bg-opacity-50 border border-purple-700 text-purple-300 text-xs px-2 py-0.5 rounded-full">
-                      🤖 AI Generated
-                    </span>
-                  )}
-                </div>
-                <p className="text-purple-400 font-bold">Score: {score}</p>
+            {/* Header */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-white">Level {activeLevel} — {currentLevelData?.title}</h2>
+                <p className="text-gray-500 text-sm mt-0.5">
+                  {aiGenerated ? `🤖 AI Generated • ${nativeLanguage}` : '📝 Classic Mode'}
+                </p>
               </div>
-              <div className="w-full bg-gray-800 rounded-full h-2">
+              <button
+                onClick={() => setStage('levels')}
+                className="text-gray-600 hover:text-white transition text-sm"
+              >
+                ✕ Exit
+              </button>
+            </div>
+
+            {/* Progress */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 bg-gray-800 rounded-full h-1.5 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-purple-600 to-blue-500 h-2 rounded-full transition-all"
+                  className="bg-purple-600 h-1.5 rounded-full transition-all duration-500"
                   style={{ width: `${(currentQ / 10) * 100}%` }}
                 ></div>
               </div>
+              <span className="text-xs text-gray-500 flex-shrink-0">{currentQ + 1}/10</span>
+              <span className="text-xs text-purple-400 font-bold flex-shrink-0">Score: {score}</span>
             </div>
 
             {/* Question Card */}
-            <div className={`bg-gradient-to-br ${currentLevelData?.color} rounded-2xl p-8 text-center shadow-2xl`}>
-              <p className="text-sm text-white text-opacity-80 mb-2">What does this word mean?</p>
-              <div className="flex items-center justify-center gap-3">
-                <h3 className="text-4xl font-bold text-white">{quizQuestions[currentQ].word}</h3>
-                <button
-                  onClick={() => speakWord(quizQuestions[currentQ].word)}
-                  className="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-full transition"
-                >
-                  🔊
-                </button>
+            <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-purple-600"></div>
+              <div className="p-6 pl-8">
+                <p className="text-xs text-gray-500 mb-3">What does this word mean?</p>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-4xl font-bold text-white">{quizQuestions[currentQ].word}</h3>
+                  <button
+                    onClick={() => speakWord(quizQuestions[currentQ].word)}
+                    className="text-gray-600 hover:text-purple-400 transition text-xl"
+                  >
+                    🔊
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Options */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               {quizQuestions[currentQ].options.map((option, i) => (
                 <button
                   key={i}
                   onClick={() => handleAnswer(option)}
-                  className={`w-full text-left px-5 py-4 rounded-xl border-2 transition font-medium ${
+                  className={`w-full text-left px-5 py-4 rounded-xl border-2 transition font-medium text-sm ${
                     !showAnswer
                       ? 'border-gray-700 bg-gray-900 hover:border-gray-500 text-gray-200'
                       : option === quizQuestions[currentQ].correct
-                      ? 'border-green-500 bg-green-900 bg-opacity-30 text-green-300'
+                      ? 'border-green-500 bg-green-900 bg-opacity-20 text-green-300'
                       : option === selected
-                      ? 'border-red-500 bg-red-900 bg-opacity-30 text-red-300'
-                      : 'border-gray-800 bg-gray-900 text-gray-500'
+                      ? 'border-red-500 bg-red-900 bg-opacity-20 text-red-300'
+                      : 'border-gray-800 bg-gray-900 text-gray-600'
                   }`}
                 >
                   {option}
@@ -395,24 +444,32 @@ function Quiz() {
 
             {/* AI Explanation */}
             {showAnswer && selected !== quizQuestions[currentQ].correct && aiGenerated && (
-              <div className="bg-purple-900 bg-opacity-20 border border-purple-700 rounded-2xl p-5">
-                <p className="text-sm font-bold text-purple-300 mb-2">🤖 AI Explanation</p>
-                {loadingExplanation ? (
-                  <div className="flex gap-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                  </div>
-                ) : (
-                  <p className="text-gray-300 text-sm leading-relaxed">{explanation}</p>
-                )}
+              <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-800">
+                  <p className="font-bold text-white flex items-center gap-2">
+                    <span className="w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center text-xs">🤖</span>
+                    AI Explanation
+                  </p>
+                </div>
+                <div className="p-5">
+                  {loadingExplanation ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-gray-500 text-sm">Generating explanation...</span>
+                    </div>
+                  ) : (
+                    <div className="relative pl-4 border-l-2 border-purple-600">
+                      <p className="text-gray-300 text-sm leading-relaxed">{explanation}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
             {showAnswer && (
               <button
                 onClick={nextQuestion}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3 rounded-xl transition font-bold"
+                className="w-full bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-xl font-bold transition shadow-lg shadow-purple-900/40"
               >
                 {currentQ + 1 === 10 ? 'See Results 🎉' : 'Next Question →'}
               </button>
@@ -421,69 +478,77 @@ function Quiz() {
         )}
 
         {stage === 'result' && (
-          <div className="text-center space-y-6">
-            <div>
-              <p className="text-6xl mb-4">
-                {finalScore >= 8 ? '🏆' : finalScore >= 5 ? '🌟' : '💪'}
-              </p>
-              <h2 className="text-2xl font-bold mb-2">Level {activeLevel} Complete!</h2>
-              <div className={`text-6xl font-bold mb-2 ${
-                finalScore >= 8 ? 'text-green-400' :
-                finalScore >= 5 ? 'text-orange-400' : 'text-red-400'
-              }`}>
-                {finalScore}/10
+          <div className="space-y-5">
+
+            {/* Result Card */}
+            <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-gray-900 to-gray-900 opacity-50"></div>
+              <div className="relative p-8 text-center">
+                <p className="text-5xl mb-4">
+                  {finalScore >= 8 ? '🏆' : finalScore >= 5 ? '🌟' : '💪'}
+                </p>
+                <h2 className="text-2xl font-bold text-white mb-1">Level {activeLevel} Complete!</h2>
+                <div className={`text-6xl font-bold my-3 ${
+                  finalScore >= 8 ? 'text-green-400' :
+                  finalScore >= 5 ? 'text-yellow-400' : 'text-red-400'
+                }`}>
+                  {finalScore}/10
+                </div>
+                {aiGenerated && (
+                  <span className="text-xs bg-purple-900 bg-opacity-50 border border-purple-800 text-purple-300 px-3 py-1 rounded-full">
+                    🤖 AI Generated Quiz
+                  </span>
+                )}
               </div>
-              {aiGenerated && (
-                <span className="bg-purple-900 bg-opacity-50 border border-purple-700 text-purple-300 text-xs px-3 py-1 rounded-full">
-                  🤖 AI Generated Quiz
-                </span>
-              )}
             </div>
 
             {finalScore >= 8 ? (
-              <div className="bg-green-900 bg-opacity-30 border border-green-700 rounded-2xl p-5">
-                <p className="text-green-400 font-bold text-lg">🎉 Level {activeLevel} Passed!</p>
-                {activeLevel < 5 && (
-                  <p className="text-green-300 text-sm mt-1">Level {activeLevel + 1} is now unlocked!</p>
-                )}
+              <div className="bg-gray-900 border border-green-800 rounded-2xl p-5">
+                <div className="relative pl-4 border-l-2 border-green-500">
+                  <p className="text-green-400 font-bold">🎉 Level {activeLevel} Passed!</p>
+                  {activeLevel < 5 && (
+                    <p className="text-green-300 text-sm mt-1">Level {activeLevel + 1} — {levels[activeLevel]?.title} is now unlocked!</p>
+                  )}
+                </div>
               </div>
             ) : (
-              <div className="bg-orange-900 bg-opacity-30 border border-orange-700 rounded-2xl p-5">
-                <p className="text-orange-400 font-bold">Need 8/10 to unlock next level</p>
-                <p className="text-orange-300 text-sm mt-1">Keep practicing! You can do it! 💪</p>
-                {wrongWords.length > 0 && (
-                  <p className="text-gray-400 text-xs mt-2">Words to practice: {wrongWords.join(', ')}</p>
-                )}
+              <div className="bg-gray-900 border border-yellow-800 rounded-2xl p-5">
+                <div className="relative pl-4 border-l-2 border-yellow-500">
+                  <p className="text-yellow-400 font-bold">Need 8/10 to unlock next level</p>
+                  {wrongWords.length > 0 && (
+                    <p className="text-gray-500 text-xs mt-1">Practice: {wrongWords.join(', ')}</p>
+                  )}
+                </div>
               </div>
             )}
 
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
                   <p className="text-2xl font-bold text-green-400">{finalScore}</p>
-                  <p className="text-sm text-gray-500">Correct</p>
+                  <p className="text-xs text-gray-500">Correct</p>
                 </div>
-                <div className="text-center">
+                <div>
                   <p className="text-2xl font-bold text-red-400">{10 - finalScore}</p>
-                  <p className="text-sm text-gray-500">Wrong</p>
+                  <p className="text-xs text-gray-500">Wrong</p>
                 </div>
-                <div className="text-center">
+                <div>
                   <p className="text-2xl font-bold text-purple-400">{finalScore * 10}%</p>
-                  <p className="text-sm text-gray-500">Score</p>
+                  <p className="text-xs text-gray-500">Score</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => setStage('levels')}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3 rounded-xl transition font-bold"
+                className="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-xl font-bold transition shadow-lg shadow-purple-900/40"
               >
                 Back to Levels
               </button>
               <button
                 onClick={() => startQuiz(levels.find(l => l.level === activeLevel), aiGenerated)}
-                className="flex-1 bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white py-3 rounded-xl transition font-bold"
+                className="flex-1 bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white py-3 rounded-xl font-bold transition"
               >
                 Try Again 🔄
               </button>

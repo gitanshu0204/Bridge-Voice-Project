@@ -10,7 +10,7 @@ function Chat() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello! I'm your BridgeVoice AI conversation partner. I'm here to help you practice English. What scenario would you like to practice today? You can type or use the microphone button to speak!"
+      content: "Hello! I'm your BridgeVoice AI conversation partner. I'm here to help you practice English. What scenario would you like to practice today?"
     }
   ])
   const [input, setInput] = useState('')
@@ -26,10 +26,7 @@ function Chat() {
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (!token) {
-      navigate('/login')
-      return
-    }
+    if (!token) { navigate('/login'); return }
     scrollToBottom()
   }, [messages])
 
@@ -61,11 +58,7 @@ function Chat() {
       await fetch('http://127.0.0.1:8000/api/conversations/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_email: email,
-          scenario: scenario,
-          messages: messages
-        })
+        body: JSON.stringify({ user_email: email, scenario, messages })
       })
       setMessages([{
         role: 'assistant',
@@ -74,7 +67,7 @@ function Chat() {
       setActiveTab('history')
       fetchConversations()
     } catch (err) {
-      console.log('Could not save conversation')
+      console.log('Could not save')
     }
   }
 
@@ -89,12 +82,8 @@ function Chat() {
 
   const sendMessage = async (text) => {
     if (!text.trim()) return
-
     const limit = checkLimit('chat')
-    if (!limit.allowed) {
-      setShowUpgrade(true)
-      return
-    }
+    if (!limit.allowed) { setShowUpgrade(true); return }
     trackUsage('chat')
 
     const userMessage = { role: 'user', content: text }
@@ -119,7 +108,7 @@ function Chat() {
     } catch (err) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "I'm having trouble connecting right now. Please check your connection and try again!"
+        content: "I'm having trouble connecting. Please check your backend is running!"
       }])
     }
     setLoading(false)
@@ -127,49 +116,28 @@ function Chat() {
 
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert('Please use Google Chrome for speech recognition.')
+      alert('Please use Google Chrome.')
       return
     }
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     recognitionRef.current = new SpeechRecognition()
-    recognitionRef.current.continuous = false
-    recognitionRef.current.interimResults = false
     recognitionRef.current.lang = 'en-US'
     recognitionRef.current.onstart = () => setListening(true)
     recognitionRef.current.onend = () => setListening(false)
-    recognitionRef.current.onresult = (event) => {
-      const transcript = event.results[0][0].transcript
-      sendMessage(transcript)
-    }
-    recognitionRef.current.onerror = () => {
-      setListening(false)
-      alert('Could not hear you. Please try again.')
-    }
+    recognitionRef.current.onresult = (e) => sendMessage(e.results[0][0].transcript)
+    recognitionRef.current.onerror = () => { setListening(false); alert('Could not hear you.') }
     recognitionRef.current.start()
   }
 
-  const stopListening = () => {
-    recognitionRef.current?.stop()
-    setListening(false)
-  }
+  const stopListening = () => { recognitionRef.current?.stop(); setListening(false) }
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage(input)
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) }
   }
 
-  const getScenarioIcon = (scenario) => {
-    const icons = {
-      'Job Interview': '💼',
-      'Grocery Store': '🛒',
-      'Doctor Visit': '🏥',
-      'Bank Visit': '🏦',
-      'Workplace Chat': '🏢',
-      'General Conversation': '💬',
-    }
-    return icons[scenario] || '💬'
+  const getScenarioIcon = (s) => {
+    const icons = { 'Job Interview': '💼', 'Grocery Store': '🛒', 'Doctor Visit': '🏥', 'Bank Visit': '🏦', 'Workplace Chat': '🏢', 'General Conversation': '💬' }
+    return icons[s] || '💬'
   }
 
   const chatLimit = checkLimit('chat')
@@ -187,21 +155,34 @@ function Chat() {
     <Layout>
       <div className="max-w-3xl mx-auto space-y-4">
 
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h2 className="text-2xl font-bold text-white">AI Conversation</h2>
-            <p className="text-gray-400 text-sm mt-1">Practice English with your AI conversation partner</p>
-          </div>
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium ${
-            chatLimit.remaining <= 2
-              ? 'bg-red-900 bg-opacity-20 border-red-800 text-red-400'
-              : chatLimit.remaining <= 5
-              ? 'bg-yellow-900 bg-opacity-20 border-yellow-800 text-yellow-400'
-              : 'bg-green-900 bg-opacity-20 border-green-800 text-green-400'
-          }`}>
-            <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-            {chatLimit.remaining}/{chatLimit.limit} left today
+        {/* Hero */}
+        <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-gray-900 to-gray-900 opacity-60"></div>
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
+          <div className="relative p-8 flex justify-between items-center">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">AI Conversation Partner</span>
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">AI Chat</h2>
+              <p className="text-gray-400 text-sm max-w-md leading-relaxed">
+                Practice real English conversations with your AI partner. Choose a scenario and start speaking or typing!
+              </p>
+              <div className="flex items-center gap-4 mt-4">
+                {[
+                  { value: '6', label: 'Scenarios' },
+                  { value: `${chatLimit.remaining}/${chatLimit.limit}`, label: 'Left Today' },
+                  { value: '🎤', label: 'Voice Input' },
+                ].map((stat, i) => (
+                  <div key={i}>
+                    <p className="text-lg font-bold text-purple-400">{stat.value}</p>
+                    <p className="text-gray-500 text-xs">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="hidden md:block text-8xl opacity-10">🗣️</div>
           </div>
         </div>
 
@@ -257,33 +238,47 @@ function Chat() {
             {/* Chat Window */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
 
-              {/* Active scenario indicator */}
+              {/* Chat Header */}
               <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                   <span className="text-xs text-gray-400 font-medium">{scenario}</span>
                 </div>
-                <button
-                  onClick={saveConversation}
-                  disabled={messages.length <= 1}
-                  className="text-xs text-gray-500 hover:text-green-400 transition disabled:opacity-30 flex items-center gap-1"
-                >
-                  💾 Save
-                </button>
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                    chatLimit.remaining <= 2
+                      ? 'bg-red-900 bg-opacity-20 border-red-800 text-red-400'
+                      : chatLimit.remaining <= 5
+                      ? 'bg-yellow-900 bg-opacity-20 border-yellow-800 text-yellow-400'
+                      : 'bg-green-900 bg-opacity-20 border-green-800 text-green-400'
+                  }`}>
+                    {chatLimit.remaining}/{chatLimit.limit} left
+                  </span>
+                  <button
+                    onClick={saveConversation}
+                    disabled={messages.length <= 1}
+                    className="text-xs text-gray-600 hover:text-green-400 transition disabled:opacity-30 flex items-center gap-1"
+                  >
+                    💾 Save
+                  </button>
+                </div>
               </div>
 
               {/* Messages */}
-              <div className="overflow-y-auto p-4 space-y-4" style={{ maxHeight: '420px', minHeight: '300px' }}>
+              <div
+                className="overflow-y-auto p-5 space-y-4"
+                style={{ minHeight: '380px', maxHeight: '420px' }}
+              >
                 {messages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-3`}>
                     {msg.role === 'assistant' && (
-                      <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold text-white mr-2 flex-shrink-0 mt-1">
+                      <div className="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-1 shadow-lg shadow-purple-900/40">
                         AI
                       </div>
                     )}
-                    <div className={`max-w-xs md:max-w-md px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                    <div className={`max-w-xs md:max-w-sm px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-purple-600 text-white rounded-br-sm'
+                        ? 'bg-purple-600 text-white rounded-br-sm shadow-lg shadow-purple-900/30'
                         : 'bg-gray-800 border border-gray-700 text-gray-200 rounded-bl-sm'
                     }`}>
                       {msg.content}
@@ -292,12 +287,12 @@ function Chat() {
                 ))}
 
                 {loading && (
-                  <div className="flex justify-start">
-                    <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold text-white mr-2 flex-shrink-0">
+                  <div className="flex justify-start gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-lg shadow-purple-900/40">
                       AI
                     </div>
                     <div className="bg-gray-800 border border-gray-700 px-4 py-3 rounded-2xl rounded-bl-sm">
-                      <div className="flex gap-1.5 items-center">
+                      <div className="flex gap-1.5 items-center h-4">
                         <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                         <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                         <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
@@ -315,7 +310,7 @@ function Chat() {
                     onClick={listening ? stopListening : startListening}
                     className={`w-10 h-10 rounded-xl flex items-center justify-center transition flex-shrink-0 ${
                       listening
-                        ? 'bg-red-600 text-white animate-pulse'
+                        ? 'bg-red-600 text-white animate-pulse shadow-lg shadow-red-900/40'
                         : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
                     }`}
                   >
@@ -333,7 +328,7 @@ function Chat() {
                   <button
                     onClick={() => sendMessage(input)}
                     disabled={!input.trim() || loading}
-                    className="w-10 h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center transition disabled:opacity-40 flex-shrink-0 shadow-lg shadow-purple-900/40"
+                    className="w-10 h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center transition disabled:opacity-40 flex-shrink-0 shadow-lg shadow-purple-900/40 font-bold"
                   >
                     →
                   </button>
@@ -380,7 +375,7 @@ function Chat() {
               </div>
             ) : conversations.length === 0 ? (
               <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 text-center">
-                <p className="text-4xl mb-4">💬</p>
+                <p className="text-4xl mb-4 opacity-20">💬</p>
                 <p className="font-bold text-gray-300 mb-2">No conversations saved yet</p>
                 <p className="text-gray-500 text-sm mb-4">Start chatting and click Save to keep your history</p>
                 <button
@@ -392,7 +387,7 @@ function Chat() {
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-gray-500 text-xs">{conversations.length} saved conversation{conversations.length !== 1 ? 's' : ''}</p>
+                <p className="text-gray-500 text-xs px-1">{conversations.length} saved conversation{conversations.length !== 1 ? 's' : ''}</p>
                 {conversations.map((conv) => (
                   <div key={conv.id} className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition">
                     <div className="flex justify-between items-center p-4">
@@ -420,7 +415,6 @@ function Chat() {
                         </button>
                       </div>
                     </div>
-
                     {expanded === conv.id && (
                       <div className="border-t border-gray-800 p-4 space-y-3 max-h-72 overflow-y-auto">
                         {conv.messages.map((msg, j) => (

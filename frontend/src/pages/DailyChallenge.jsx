@@ -1,68 +1,73 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 
 function DailyChallenge() {
   const navigate = useNavigate()
+  const [challenges, setChallenges] = useState([])
+  const [generating, setGenerating] = useState(false)
   const [activeChallenge, setActiveChallenge] = useState(null)
-  const [stage, setStage] = useState('home')
-  const [input, setInput] = useState('')
-  const [result, setResult] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [userResponse, setUserResponse] = useState('')
   const [listening, setListening] = useState(false)
-  const [spokenText, setSpokenText] = useState('')
-  const [streak, setStreak] = useState(7)
-  const [completedToday, setCompletedToday] = useState(
-    JSON.parse(localStorage.getItem('dailyChallenge') || '[]')
+  const [submitting, setSubmitting] = useState(false)
+  const [result, setResult] = useState(null)
+  const [completedChallenges, setCompletedChallenges] = useState(
+    JSON.parse(localStorage.getItem('completedChallenges') || '{}')
   )
-  const recognitionRef = useRef(null)
+  const [nativeLanguage, setNativeLanguage] = useState(
+    localStorage.getItem('nativeLanguage') || 'Hindi'
+  )
+  const [proficiencyLevel, setProficiencyLevel] = useState(
+    localStorage.getItem('proficiencyLevel') || 'Beginner'
+  )
+  const [totalXP, setTotalXP] = useState(
+    parseInt(localStorage.getItem('totalXP') || '0')
+  )
+  const [showNative, setShowNative] = useState(false)
+  const [challengeDate, setChallengeDate] = useState('')
+  const [streak, setStreak] = useState(
+    parseInt(localStorage.getItem('streak') || '7')
+  )
 
-  const today = new Date().toLocaleDateString('en-CA')
+  const today = new Date().toISOString().split('T')[0]
 
-  const challenges = [
-    {
-      id: 'speaking',
-      type: 'Speaking Challenge',
-      icon: '🗣️',
-      color: 'from-purple-600 to-purple-800',
-      xp: 50,
-      title: 'Talk About Your Dream Job',
-      desc: 'Speak for at least 30 seconds about what your dream job is and why you want it.',
-      instruction: 'Click the microphone and speak about your dream job. Talk about what it is, why you want it, and what skills you need.',
-      tip: 'Try to speak for at least 30 seconds. Use words like "because", "therefore", "however" to connect your ideas.'
-    },
-    {
-      id: 'writing',
-      type: 'Writing Challenge',
-      icon: '✍️',
-      color: 'from-blue-600 to-blue-800',
-      xp: 40,
-      title: 'Write About Your First Day in Canada',
-      desc: 'Write at least 5 sentences about your experience or what you imagine your first day in Canada was like.',
-      instruction: 'Write at least 5 sentences about your first day in Canada. Describe what you saw, felt and experienced.',
-      tip: 'Use past tense verbs like "was", "saw", "felt", "visited". Try to include descriptive words.'
-    },
-    {
-      id: 'vocabulary',
-      type: 'Vocabulary Challenge',
-      icon: '🧠',
-      color: 'from-green-600 to-green-800',
-      xp: 30,
-      title: 'Use 5 New Words in Sentences',
-      desc: 'Write one sentence using each of these words: Perseverance, Etiquette, Collaborate, Resilient, Innovative',
-      instruction: 'Write one sentence for each word: Perseverance, Etiquette, Collaborate, Resilient, Innovative. Show you understand the meaning!',
-      tip: 'Make sure your sentence shows the meaning of the word. For example: "Her perseverance helped her learn English in 6 months."'
+  useEffect(() => {
+    const savedChallenges = localStorage.getItem(`challenges_${today}`)
+    if (savedChallenges) {
+      const parsed = JSON.parse(savedChallenges)
+      setChallenges(parsed.challenges)
+      setChallengeDate(parsed.date)
+    } else {
+      generateChallenges()
     }
-  ]
+  }, [])
 
-  const isCompleted = (id) => completedToday.includes(id)
+  const generateChallenges = async () => {
+    setGenerating(true)
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/daily-challenge/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          native_language: nativeLanguage,
+          proficiency_level: proficiencyLevel
+        })
+      })
+      const data = await response.json()
+      setChallenges(data.challenges)
+      setChallengeDate(data.date)
+      localStorage.setItem(`challenges_${today}`, JSON.stringify(data))
+    } catch (err) {
+      console.log('Could not generate challenges')
+    }
+    setGenerating(false)
+  }
 
-  const startChallenge = (challenge) => {
-    setActiveChallenge(challenge)
-    setStage('challenge')
-    setInput('')
+  const startChallenge = (challenge, index) => {
+    setActiveChallenge({ ...challenge, index })
+    setUserResponse('')
     setResult(null)
-    setSpokenText('')
+    setShowNative(false)
   }
 
   const startListening = () => {
@@ -71,294 +76,429 @@ function DailyChallenge() {
       return
     }
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    recognitionRef.current = new SpeechRecognition()
-    recognitionRef.current.continuous = true
-    recognitionRef.current.interimResults = true
-    recognitionRef.current.lang = 'en-US'
-    recognitionRef.current.onstart = () => setListening(true)
-    recognitionRef.current.onend = () => setListening(false)
-    recognitionRef.current.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map(result => result[0].transcript)
-        .join('')
-      setSpokenText(transcript)
-    }
-    recognitionRef.current.start()
-  }
-
-  const stopListening = () => {
-    recognitionRef.current?.stop()
-    setListening(false)
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-US'
+    recognition.onstart = () => setListening(true)
+    recognition.onend = () => setListening(false)
+    recognition.onresult = (e) => setUserResponse(e.results[0][0].transcript)
+    recognition.start()
   }
 
   const submitChallenge = async () => {
-    const content = activeChallenge.id === 'speaking' ? spokenText : input
-    if (!content.trim()) return
-
-    setLoading(true)
-
+    if (!userResponse.trim()) return
+    setSubmitting(true)
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/daily-challenge', {
+      const response = await fetch('http://127.0.0.1:8000/api/daily-challenge/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          challenge_type: activeChallenge.id,
-          challenge_title: activeChallenge.title,
-          content: content
+          challenge_type: activeChallenge.type,
+          challenge_text: activeChallenge.instruction,
+          user_response: userResponse,
+          native_language: nativeLanguage
         })
       })
       const data = await response.json()
       setResult(data)
 
-      if (!isCompleted(activeChallenge.id)) {
-        const updated = [...completedToday, activeChallenge.id]
-        setCompletedToday(updated)
-        localStorage.setItem('dailyChallenge', JSON.stringify(updated))
+      const newCompleted = {
+        ...completedChallenges,
+        [`${today}_${activeChallenge.index}`]: {
+          score: data.score,
+          xp: data.xp_earned
+        }
       }
+      setCompletedChallenges(newCompleted)
+      localStorage.setItem('completedChallenges', JSON.stringify(newCompleted))
+
+      const newXP = totalXP + (data.xp_earned || 20)
+      setTotalXP(newXP)
+      localStorage.setItem('totalXP', newXP.toString())
+
     } catch (err) {
-      setResult({
-        score: 75,
-        feedback: 'Great effort on completing the challenge! Keep practicing every day to improve your English.',
-        strengths: ['Good attempt at the challenge', 'You are building confidence'],
-        improvements: ['Try to use more varied vocabulary', 'Practice speaking longer sentences'],
-        xp_earned: activeChallenge.xp
-      })
-      if (!isCompleted(activeChallenge.id)) {
-        const updated = [...completedToday, activeChallenge.id]
-        setCompletedToday(updated)
-        localStorage.setItem('dailyChallenge', JSON.stringify(updated))
-      }
+      console.log('Submit error')
     }
-    setLoading(false)
-    setStage('result')
+    setSubmitting(false)
   }
 
-  const totalXP = completedToday.reduce((total, id) => {
-    const challenge = challenges.find(c => c.id === id)
-    return total + (challenge?.xp || 0)
-  }, 0)
+  const isCompleted = (index) => {
+    return completedChallenges[`${today}_${index}`]
+  }
+
+  const allCompleted = challenges.length > 0 &&
+    challenges.every((_, i) => isCompleted(i))
+
+  const completedCount = challenges.filter((_, i) => isCompleted(i)).length
+
+  const speakText = (text) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = 'en-CA'
+      utterance.rate = 0.9
+      window.speechSynthesis.speak(utterance)
+    }
+  }
 
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto space-y-6">
 
-        {stage === 'home' && (
-          <div>
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold">🎯 Daily Challenge</h2>
-              <p className="text-gray-400 mt-1">Complete challenges every day to earn XP and improve your English!</p>
+        {/* Hero */}
+        <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-gray-900 to-gray-900 opacity-60"></div>
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
+          <div className="relative p-8 flex justify-between items-center">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></span>
+                <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">AI Generated Daily</span>
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">Daily Challenge</h2>
+              <p className="text-gray-400 text-sm max-w-md leading-relaxed">
+                AI generates fresh challenges every day based on your level and native language. Complete all 3 to earn XP!
+              </p>
+              <div className="flex items-center gap-4 mt-4">
+                {[
+                  { value: `🔥 ${streak}`, label: 'Day Streak' },
+                  { value: `${completedCount}/3`, label: 'Today' },
+                  { value: `${totalXP}`, label: 'Total XP' },
+                ].map((stat, i) => (
+                  <div key={i}>
+                    <p className="text-lg font-bold text-purple-400">{stat.value}</p>
+                    <p className="text-gray-500 text-xs">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
+            <div className="hidden md:block text-8xl opacity-10">🎯</div>
+          </div>
+        </div>
 
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 text-center">
-                <p className="text-3xl font-bold text-orange-400">🔥 {streak}</p>
-                <p className="text-gray-500 text-sm mt-1">Day Streak</p>
-              </div>
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 text-center">
-                <p className="text-3xl font-bold text-purple-400">{totalXP}</p>
-                <p className="text-gray-500 text-sm mt-1">XP Today</p>
-              </div>
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 text-center">
-                <p className="text-3xl font-bold text-green-400">{completedToday.length}/3</p>
-                <p className="text-gray-500 text-sm mt-1">Completed</p>
+        {/* Settings Bar */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-800 flex justify-between items-center">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Your Settings</p>
+            <button
+              onClick={() => {
+                localStorage.removeItem(`challenges_${today}`)
+                generateChallenges()
+              }}
+              className="text-xs text-gray-500 hover:text-purple-400 transition flex items-center gap-1"
+            >
+              🔄 New Challenges
+            </button>
+          </div>
+          <div className="p-4 flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <p className="text-xs text-gray-500 mb-2">Native Language:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {['Hindi', 'Punjabi', 'Mandarin', 'Arabic', 'Spanish', 'French', 'Urdu'].map(lang => (
+                  <button
+                    key={lang}
+                    onClick={() => {
+                      setNativeLanguage(lang)
+                      localStorage.setItem('nativeLanguage', lang)
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                      nativeLanguage === lang
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {lang}
+                  </button>
+                ))}
               </div>
             </div>
+            <div className="flex-1">
+              <p className="text-xs text-gray-500 mb-2">Level:</p>
+              <div className="flex gap-1.5">
+                {['Beginner', 'Intermediate', 'Advanced'].map(level => (
+                  <button
+                    key={level}
+                    onClick={() => {
+                      setProficiencyLevel(level)
+                      localStorage.setItem('proficiencyLevel', level)
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                      proficiencyLevel === level
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
 
-            {completedToday.length === 3 && (
-              <div className="bg-green-900 bg-opacity-30 border border-green-700 rounded-2xl p-5 mb-6 text-center">
-                <p className="text-2xl mb-2">🎉</p>
-                <p className="font-bold text-green-400 text-lg">All challenges completed today!</p>
-                <p className="text-gray-400 text-sm mt-1">Come back tomorrow for new challenges. Great work! 💪</p>
+        {/* Generating */}
+        {generating && (
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-16 text-center">
+            <div className="w-12 h-12 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-300 font-medium">AI is generating today's challenges...</p>
+            <p className="text-gray-600 text-sm mt-1">Creating challenges for {nativeLanguage} • {proficiencyLevel}</p>
+          </div>
+        )}
+
+        {/* All Complete Banner */}
+        {allCompleted && !generating && (
+          <div className="relative bg-gray-900 border border-green-800 rounded-2xl overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-green-900 via-gray-900 to-gray-900 opacity-30"></div>
+            <div className="relative px-6 py-5 flex items-center gap-4">
+              <span className="text-4xl">🏆</span>
+              <div>
+                <p className="font-bold text-green-400 text-lg">All challenges completed!</p>
+                <p className="text-gray-400 text-sm">Come back tomorrow for new AI-generated challenges!</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Challenge Cards */}
+        {!generating && challenges.length > 0 && !activeChallenge && (
+          <div className="space-y-3">
+            {challengeDate && (
+              <div className="flex items-center justify-between px-1">
+                <p className="text-xs text-gray-500">📅 {challengeDate}</p>
+                <p className="text-xs text-purple-400">🤖 AI Generated for {nativeLanguage}</p>
               </div>
             )}
-
-            <div className="space-y-4">
-              {challenges.map((challenge, i) => (
-                <div key={i} className={`bg-gray-900 border rounded-2xl p-6 transition ${
-                  isCompleted(challenge.id)
-                    ? 'border-green-800 opacity-75'
-                    : 'border-gray-800 hover:border-gray-600'
-                }`}>
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-start gap-4">
-                      <div className={`w-14 h-14 bg-gradient-to-br ${challenge.color} rounded-xl flex items-center justify-center text-2xl flex-shrink-0`}>
-                        {isCompleted(challenge.id) ? '✅' : challenge.icon}
+            {challenges.map((challenge, i) => {
+              const completed = isCompleted(i)
+              return (
+                <div
+                  key={i}
+                  className={`bg-gray-900 border rounded-2xl overflow-hidden transition ${
+                    completed ? 'border-green-900' : 'border-gray-800 hover:border-gray-700'
+                  }`}
+                >
+                  <div className="p-5 flex items-center gap-4">
+                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${
+                      completed
+                        ? 'bg-green-900 bg-opacity-30 border border-green-800'
+                        : 'bg-purple-600 bg-opacity-20 border border-purple-800'
+                    }`}>
+                      {completed ? '✅' : challenge.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="font-bold text-white">{challenge.title}</p>
+                        <span className="text-xs bg-gray-800 border border-gray-700 text-gray-500 px-2 py-0.5 rounded-full">
+                          {challenge.type}
+                        </span>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500 font-semibold uppercase mb-1">{challenge.type}</p>
-                        <h3 className="font-bold text-white text-lg">{challenge.title}</h3>
-                        <p className="text-gray-400 text-sm mt-1">{challenge.desc}</p>
-                        <p className="text-purple-400 text-sm mt-2 font-medium">+{challenge.xp} XP</p>
+                      <p className="text-gray-500 text-xs truncate">{challenge.instruction}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-xs text-purple-400 font-medium">⭐ {challenge.xp} XP</span>
+                        {completed && (
+                          <span className="text-xs text-green-400">
+                            Score: {completedChallenges[`${today}_${i}`]?.score}%
+                          </span>
+                        )}
                       </div>
                     </div>
                     <button
-                      onClick={() => !isCompleted(challenge.id) && startChallenge(challenge)}
-                      disabled={isCompleted(challenge.id)}
-                      className={`px-4 py-2 rounded-xl font-medium text-sm transition flex-shrink-0 ${
-                        isCompleted(challenge.id)
-                          ? 'bg-green-900 bg-opacity-30 text-green-400 cursor-default'
-                          : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white'
+                      onClick={() => startChallenge(challenge, i)}
+                      className={`px-4 py-2 rounded-xl text-sm font-bold transition flex-shrink-0 ${
+                        completed
+                          ? 'border border-gray-700 text-gray-500 hover:text-white hover:border-gray-500'
+                          : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/40'
                       }`}
                     >
-                      {isCompleted(challenge.id) ? 'Completed ✅' : 'Start →'}
+                      {completed ? 'Redo' : 'Start →'}
                     </button>
                   </div>
                 </div>
-              ))}
+              )
+            })}
+          </div>
+        )}
+
+        {/* Active Challenge */}
+        {activeChallenge && !result && (
+          <div className="space-y-4">
+
+            {/* Header */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-white">{activeChallenge.title}</h3>
+                <p className="text-gray-500 text-sm">{activeChallenge.type} • ⭐ {activeChallenge.xp} XP</p>
+              </div>
+              <button
+                onClick={() => setActiveChallenge(null)}
+                className="text-gray-600 hover:text-white transition text-sm"
+              >
+                ✕ Back
+              </button>
             </div>
 
-            <div className="mt-6 bg-yellow-900 bg-opacity-20 border border-yellow-800 rounded-2xl p-4 text-center">
-              <p className="text-yellow-400 font-semibold">🔄 New challenges unlock every day at midnight!</p>
-              <p className="text-gray-500 text-sm mt-1">Complete all 3 to maintain your streak and earn bonus XP</p>
+            {/* Challenge Card */}
+            <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-purple-600"></div>
+              <div className="p-6 pl-8">
+                <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Your Challenge</p>
+                <p className="text-white text-lg leading-relaxed mb-4">{activeChallenge.instruction}</p>
+
+                {activeChallenge.words && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {activeChallenge.words.map((word, i) => (
+                      <span key={i} className="bg-purple-900 bg-opacity-30 border border-purple-800 text-purple-300 px-3 py-1 rounded-full text-sm font-medium">
+                        {word}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-start gap-2 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3">
+                  <span className="text-blue-400 text-sm mt-0.5 flex-shrink-0">💬</span>
+                  <p className="text-gray-400 text-sm">Example: "{activeChallenge.example}"</p>
+                  <button
+                    onClick={() => speakText(activeChallenge.example)}
+                    className="text-gray-600 hover:text-purple-400 transition flex-shrink-0 ml-auto"
+                  >
+                    🔊
+                  </button>
+                </div>
+
+                <div className="flex items-start gap-2 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 mt-2">
+                  <span className="text-yellow-500 text-sm mt-0.5 flex-shrink-0">💡</span>
+                  <p className="text-gray-400 text-sm">{activeChallenge.tip}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Response */}
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-800 flex justify-between items-center">
+                <p className="text-sm font-semibold text-gray-300">Your Response</p>
+                <span className="text-xs text-gray-600">
+                  {userResponse.split(' ').filter(w => w).length} words
+                </span>
+              </div>
+              <div className="p-5">
+                <textarea
+                  value={userResponse}
+                  onChange={e => setUserResponse(e.target.value)}
+                  placeholder="Type your response here or use the microphone..."
+                  rows={5}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition resize-none text-sm leading-relaxed"
+                />
+                <div className="flex gap-2 mt-3">
+                  {activeChallenge.type === 'Speaking' && (
+                    <button
+                      onClick={startListening}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition border ${
+                        listening
+                          ? 'bg-red-900 bg-opacity-30 border-red-700 text-red-400 animate-pulse'
+                          : 'border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
+                      }`}
+                    >
+                      🎤 {listening ? 'Listening...' : 'Speak'}
+                    </button>
+                  )}
+                  <button
+                    onClick={submitChallenge}
+                    disabled={!userResponse.trim() || submitting}
+                    className="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl font-bold transition disabled:opacity-40 shadow-lg shadow-purple-900/40 flex items-center justify-center gap-2"
+                  >
+                    {submitting ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span>AI is evaluating...</span>
+                      </>
+                    ) : '✅ Submit for AI Feedback'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        {stage === 'challenge' && activeChallenge && (
-          <div>
-            <div className="mb-6">
-              <button
-                onClick={() => setStage('home')}
-                className="text-gray-500 hover:text-white transition text-sm mb-4 flex items-center gap-2"
-              >
-                ← Back to Challenges
-              </button>
-              <h2 className="text-2xl font-bold">{activeChallenge.icon} {activeChallenge.title}</h2>
-              <p className="text-gray-400 mt-1">{activeChallenge.type}</p>
+        {/* Result */}
+        {result && activeChallenge && (
+          <div className="space-y-4">
+
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold text-white">AI Feedback</h3>
+              <span className={`text-3xl font-bold ${
+                result.score >= 80 ? 'text-green-400' :
+                result.score >= 60 ? 'text-yellow-400' : 'text-red-400'
+              }`}>{result.score}%</span>
             </div>
 
-            <div className="bg-gradient-to-r from-purple-900 to-blue-900 border border-purple-700 rounded-2xl p-5 mb-6">
-              <p className="font-semibold text-purple-300 mb-2">📋 Instructions</p>
-              <p className="text-gray-300">{activeChallenge.instruction}</p>
-              <p className="text-yellow-400 text-sm mt-3">💡 Tip: {activeChallenge.tip}</p>
-            </div>
+            {/* Score Bar */}
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+              <div className="p-5 space-y-4">
+                <div className="w-full bg-gray-800 rounded-full h-3 overflow-hidden">
+                  <div
+                    className={`h-3 rounded-full transition-all duration-700 ${
+                      result.score >= 80 ? 'bg-green-500' :
+                      result.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${result.score}%` }}
+                  ></div>
+                </div>
 
-            {activeChallenge.id === 'speaking' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6">
-                <p className="font-semibold text-gray-300 mb-4">Your Response:</p>
-
-                <div className="text-center mb-6">
+                <div className="flex justify-between items-center">
+                  <p className="text-green-400 font-bold">+{result.xp_earned} XP earned!</p>
                   <button
-                    onClick={listening ? stopListening : startListening}
-                    className={`w-24 h-24 rounded-full text-4xl transition shadow-2xl ${
-                      listening
-                        ? 'bg-red-600 animate-pulse shadow-red-900'
-                        : 'bg-gradient-to-br from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-purple-900'
+                    onClick={() => setShowNative(!showNative)}
+                    className={`text-xs px-3 py-1.5 rounded-xl border transition ${
+                      showNative
+                        ? 'border-purple-600 bg-purple-900 bg-opacity-30 text-purple-300'
+                        : 'border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white'
                     }`}
                   >
-                    🎤
+                    🌍 {showNative ? 'English' : nativeLanguage}
                   </button>
-                  <p className="text-gray-400 mt-3 text-sm">
-                    {listening ? '🔴 Listening... speak now! Click to stop.' : 'Click to start speaking'}
+                </div>
+
+                {/* Feedback */}
+                <div className="relative pl-4 border-l-2 border-purple-600">
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    {showNative && result.feedback_native ? result.feedback_native : result.feedback}
                   </p>
                 </div>
 
-                {spokenText && (
+                {/* Strengths & Improvements */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-3">
+                    <p className="text-xs font-bold text-green-400 mb-2">✅ Strengths</p>
+                    {result.strengths?.map((s, i) => (
+                      <p key={i} className="text-gray-400 text-xs mb-1">• {s}</p>
+                    ))}
+                  </div>
+                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-3">
+                    <p className="text-xs font-bold text-yellow-400 mb-2">📈 Improve</p>
+                    {result.improvements?.map((s, i) => (
+                      <p key={i} className="text-gray-400 text-xs mb-1">• {s}</p>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Corrected Version */}
+                {result.corrected && result.corrected !== userResponse && (
                   <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                    <p className="text-xs text-gray-500 mb-2">What you said:</p>
-                    <p className="text-gray-200">{spokenText}</p>
-                    <p className="text-xs text-purple-400 mt-2">{spokenText.split(' ').length} words spoken</p>
+                    <p className="text-xs font-bold text-purple-400 mb-1">💬 Better Version:</p>
+                    <p className="text-gray-300 text-sm italic">"{result.corrected}"</p>
                   </div>
                 )}
               </div>
-            )}
-
-            {(activeChallenge.id === 'writing' || activeChallenge.id === 'vocabulary') && (
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6">
-                <p className="font-semibold text-gray-300 mb-3">Your Response:</p>
-                <textarea
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  placeholder={
-                    activeChallenge.id === 'writing'
-                      ? 'Write your response here... (minimum 5 sentences)'
-                      : 'Write your sentences here using each word...'
-                  }
-                  rows={8}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition resize-none"
-                />
-                <p className="text-xs text-gray-500 mt-2">{input.split(' ').filter(w => w).length} words written</p>
-              </div>
-            )}
-
-            <button
-              onClick={submitChallenge}
-              disabled={loading ||
-                (activeChallenge.id === 'speaking' && !spokenText) ||
-                ((activeChallenge.id === 'writing' || activeChallenge.id === 'vocabulary') && !input.trim())
-              }
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-4 rounded-xl font-bold text-lg transition disabled:opacity-50 shadow-lg shadow-purple-900"
-            >
-              {loading ? 'AI is analysing your response...' : 'Submit Challenge 🚀'}
-            </button>
-          </div>
-        )}
-
-        {stage === 'result' && result && activeChallenge && (
-          <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold">🎯 Challenge Complete!</h2>
-              <p className="text-gray-400 mt-1">{activeChallenge.title}</p>
             </div>
 
-            <div className="text-center mb-8">
-              <p className="text-6xl mb-4">
-                {result.score >= 80 ? '🏆' : result.score >= 60 ? '🌟' : '💪'}
-              </p>
-              <div className={`text-6xl font-bold mb-2 ${
-                result.score >= 80 ? 'text-green-400' :
-                result.score >= 60 ? 'text-orange-400' : 'text-red-400'
-              }`}>
-                {result.score}%
-              </div>
-              <div className="bg-purple-900 bg-opacity-30 border border-purple-700 rounded-xl px-6 py-3 inline-block mt-2">
-                <p className="text-purple-300 font-bold">+{result.xp_earned || activeChallenge.xp} XP Earned! 🎉</p>
-              </div>
-            </div>
-
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-4">
-              <p className="font-bold text-gray-200 mb-3">🤖 AI Feedback</p>
-              <p className="text-gray-300 leading-relaxed">{result.feedback}</p>
-            </div>
-
-            {result.strengths && result.strengths.length > 0 && (
-              <div className="bg-green-900 bg-opacity-20 border border-green-800 rounded-2xl p-5 mb-4">
-                <p className="font-bold text-green-400 mb-3">✅ What you did well:</p>
-                <ul className="space-y-2">
-                  {result.strengths.map((s, i) => (
-                    <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
-                      <span className="text-green-400 mt-0.5">•</span>
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {result.improvements && result.improvements.length > 0 && (
-              <div className="bg-orange-900 bg-opacity-20 border border-orange-800 rounded-2xl p-5 mb-6">
-                <p className="font-bold text-orange-400 mb-3">📈 Areas to improve:</p>
-                <ul className="space-y-2">
-                  {result.improvements.map((s, i) => (
-                    <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
-                      <span className="text-orange-400 mt-0.5">•</span>
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
-                onClick={() => setStage('home')}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3 rounded-xl transition font-bold"
+                onClick={() => setActiveChallenge(null)}
+                className="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-xl font-bold transition shadow-lg shadow-purple-900/40"
               >
                 Back to Challenges
               </button>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="flex-1 bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white py-3 rounded-xl transition font-bold"
+                className="flex-1 bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white py-3 rounded-xl font-bold transition"
               >
                 Dashboard
               </button>

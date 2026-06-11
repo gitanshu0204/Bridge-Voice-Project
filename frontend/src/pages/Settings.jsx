@@ -1,472 +1,402 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 
 function Settings() {
   const navigate = useNavigate()
   const [saved, setSaved] = useState(false)
-  const [activeSection, setActiveSection] = useState('notifications')
-  const [settings, setSettings] = useState(() => {
-    const saved = localStorage.getItem('bridgevoice_settings')
-    return saved ? JSON.parse(saved) : {
-      emailNotifications: true,
-      practiceReminder: true,
-      reminderTime: '09:00',
-      reminderEmail: '',
-      soundEffects: true,
-      autoSpeak: true,
-      language: 'English',
-      privacy: 'public',
-      dailyGoal: '3',
-      theme: 'dark',
-      fontSize: 'medium',
-      showProgress: true,
-      weeklyReport: false,
-    }
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  const [settings, setSettings] = useState({
+    notifications: localStorage.getItem('notif') !== 'false',
+    dailyReminder: localStorage.getItem('dailyReminder') !== 'false',
+    soundEffects: localStorage.getItem('soundEffects') !== 'false',
+    autoSpeak: localStorage.getItem('autoSpeak') !== 'false',
+    darkMode: true,
+    fontSize: localStorage.getItem('fontSize') || 'Medium',
+    language: localStorage.getItem('appLanguage') || 'English',
+    nativeLanguage: localStorage.getItem('nativeLanguage') || 'Hindi',
+    proficiencyLevel: localStorage.getItem('proficiencyLevel') || 'Beginner',
+    dailyGoal: localStorage.getItem('dailyGoal') || '3',
+    reminderTime: localStorage.getItem('reminderTime') || '09:00',
   })
 
-  useEffect(() => {
-    applyTheme(settings.theme)
-    applyFontSize(settings.fontSize)
-  }, [])
-
-  const applyTheme = (theme) => {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('bridgevoice_theme', theme)
+  const toggle = (key) => {
+    const newVal = !settings[key]
+    setSettings(prev => ({ ...prev, [key]: newVal }))
+    localStorage.setItem(key, newVal.toString())
   }
 
-  const applyFontSize = (size) => {
-    document.documentElement.setAttribute('data-fontsize', size)
-    localStorage.setItem('bridgevoice_fontsize', size)
-  }
-
-  const handleToggle = (key) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }))
-  }
-
-  const handleChange = (key, value) => {
+  const updateSetting = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }))
-    if (key === 'theme') applyTheme(value)
-    if (key === 'fontSize') applyFontSize(value)
+    localStorage.setItem(key, value)
   }
 
-  const handleSave = () => {
-    localStorage.setItem('bridgevoice_settings', JSON.stringify(settings))
+  const saveSettings = () => {
+    Object.entries(settings).forEach(([key, value]) => {
+      localStorage.setItem(key, value.toString())
+    })
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
-    if (settings.practiceReminder && 'Notification' in window) {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          new Notification('BridgeVoice Reminder Set! 🎯', {
-            body: `You'll be reminded to practice at ${settings.reminderTime} every day!`,
-            icon: '/favicon.ico'
-          })
-        }
-      })
-    }
   }
 
-  const handleDeleteAccount = () => {
-    if (window.confirm('Are you sure? This cannot be undone!')) {
-      localStorage.clear()
-      navigate('/')
-    }
+  const clearData = () => {
+    const keep = ['token', 'email', 'profilePic']
+    const toRemove = Object.keys(localStorage).filter(k => !keep.includes(k))
+    toRemove.forEach(k => localStorage.removeItem(k))
+    setShowDeleteModal(false)
+    navigate('/dashboard')
   }
 
-  const Toggle = ({ keyName, size = 'normal' }) => (
+  const Toggle = ({ value, onToggle }) => (
     <button
-      onClick={() => handleToggle(keyName)}
-      className={`rounded-full transition-all duration-300 relative flex-shrink-0 ${
-        size === 'large' ? 'w-16 h-8' : 'w-12 h-6'
-      } ${settings[keyName]
-        ? 'bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg shadow-purple-900'
-        : 'bg-gray-700'
+      onClick={onToggle}
+      className={`w-11 h-6 rounded-full transition-all relative flex-shrink-0 ${
+        value ? 'bg-purple-600' : 'bg-gray-700'
       }`}
     >
-      <div className={`bg-white rounded-full shadow-md absolute top-1 transition-all duration-300 ${
-        size === 'large'
-          ? `w-6 h-6 ${settings[keyName] ? 'translate-x-9' : 'translate-x-1'}`
-          : `w-4 h-4 ${settings[keyName] ? 'translate-x-7' : 'translate-x-1'}`
+      <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm ${
+        value ? 'translate-x-6' : 'translate-x-1'
       }`}></div>
     </button>
   )
 
-  const sections = [
-    { id: 'notifications', icon: '🔔', label: 'Notifications' },
-    { id: 'appearance', icon: '🎨', label: 'Appearance' },
-    { id: 'audio', icon: '🔊', label: 'Audio' },
-    { id: 'learning', icon: '🎯', label: 'Learning' },
-    { id: 'privacy', icon: '🔒', label: 'Privacy' },
-    { id: 'account', icon: '👤', label: 'Account' },
-  ]
+  const SettingRow = ({ icon, title, desc, children }) => (
+    <div className="flex items-center justify-between px-5 py-4 hover:bg-gray-800 transition">
+      <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
+        <span className="text-xl flex-shrink-0">{icon}</span>
+        <div className="min-w-0">
+          <p className="font-medium text-gray-200 text-sm">{title}</p>
+          {desc && <p className="text-gray-500 text-xs mt-0.5">{desc}</p>}
+        </div>
+      </div>
+      {children}
+    </div>
+  )
+
+  const SectionHeader = ({ title }) => (
+    <div className="px-5 py-3 border-b border-gray-800">
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{title}</p>
+    </div>
+  )
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto space-y-6">
-
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h2 className="text-2xl font-bold">⚙️ Settings</h2>
-            <p className="text-gray-400 mt-1">Customize your BridgeVoice experience</p>
-          </div>
-          <button
-            onClick={handleSave}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-5 py-2.5 rounded-xl font-bold transition shadow-lg shadow-purple-900"
-          >
-            💾 Save Changes
-          </button>
-        </div>
+      <div className="max-w-3xl mx-auto space-y-6">
 
         {/* Success Toast */}
         {saved && (
-          <div className="fixed top-6 right-6 z-50 bg-green-900 border border-green-700 text-green-300 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
-            <span className="text-xl">✅</span>
-            <p className="font-semibold">Settings saved successfully!</p>
+          <div className="fixed top-6 right-6 z-50 bg-green-900 border border-green-700 text-green-300 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+            <span>✅</span>
+            <p className="font-semibold text-sm">Settings saved!</p>
           </div>
         )}
 
-        {/* Theme Quick Toggle - 3D Card */}
-        <div className="relative transform hover:scale-[1.01] transition duration-300">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-3xl blur-xl opacity-20"></div>
-          <div className="relative bg-gradient-to-r from-gray-900 to-gray-800 border border-gray-700 rounded-3xl p-6">
-            <p className="font-bold text-gray-200 mb-4 text-lg">🎨 Quick Theme Switch</p>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => handleChange('theme', 'dark')}
-                className={`p-4 rounded-2xl border-2 transition flex items-center gap-3 ${
-                  settings.theme === 'dark'
-                    ? 'border-purple-500 bg-purple-900 bg-opacity-30'
-                    : 'border-gray-700 hover:border-gray-500'
-                }`}
-              >
-                <div className="w-10 h-10 bg-gray-950 rounded-xl border border-gray-700 flex items-center justify-center text-xl">🌙</div>
-                <div className="text-left">
-                  <p className="font-bold text-white">Dark Mode</p>
-                  <p className="text-xs text-gray-400">Easy on the eyes</p>
-                </div>
-                {settings.theme === 'dark' && <span className="ml-auto text-purple-400">✓</span>}
-              </button>
-              <button
-                onClick={() => handleChange('theme', 'light')}
-                className={`p-4 rounded-2xl border-2 transition flex items-center gap-3 ${
-                  settings.theme === 'light'
-                    ? 'border-yellow-500 bg-yellow-900 bg-opacity-20'
-                    : 'border-gray-700 hover:border-gray-500'
-                }`}
-              >
-                <div className="w-10 h-10 bg-yellow-100 rounded-xl border border-yellow-300 flex items-center justify-center text-xl">☀️</div>
-                <div className="text-left">
-                  <p className="font-bold text-white">Light Mode</p>
-                  <p className="text-xs text-gray-400">Bright and clear</p>
-                </div>
-                {settings.theme === 'light' && <span className="ml-auto text-yellow-400">✓</span>}
-              </button>
+        {/* Hero */}
+        <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-gray-900 to-gray-900 opacity-60"></div>
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
+          <div className="relative p-8 flex justify-between items-center">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></span>
+                <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Preferences</span>
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">Settings</h2>
+              <p className="text-gray-400 text-sm max-w-md leading-relaxed">
+                Customize your BridgeVoice experience. All changes are saved automatically.
+              </p>
             </div>
+            <div className="hidden md:block text-8xl opacity-10">⚙️</div>
           </div>
         </div>
 
-        <div className="flex gap-6">
+        {/* Learning Settings */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <SectionHeader title="Learning Preferences" />
 
-          {/* Sidebar Navigation */}
-          <div className="w-48 flex-shrink-0 space-y-1">
-            {sections.map(section => (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition text-left ${
-                  activeSection === section.id
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                }`}
+          <SettingRow
+            icon="🌍"
+            title="Native Language"
+            desc="Your first language — used for AI explanations"
+          >
+            <select
+              value={settings.nativeLanguage}
+              onChange={e => updateSetting('nativeLanguage', e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 transition text-xs"
+            >
+              {['Hindi', 'Punjabi', 'Mandarin', 'Arabic', 'Spanish', 'French', 'Tagalog', 'Urdu', 'Portuguese', 'Korean'].map(l => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </SettingRow>
+
+          <div className="border-t border-gray-800">
+            <SettingRow
+              icon="📊"
+              title="English Level"
+              desc="Used to personalize your challenges and quizzes"
+            >
+              <select
+                value={settings.proficiencyLevel}
+                onChange={e => updateSetting('proficiencyLevel', e.target.value)}
+                className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 transition text-xs"
               >
-                <span>{section.icon}</span>
-                <span className="text-sm font-medium">{section.label}</span>
-              </button>
-            ))}
+                {['Beginner', 'Elementary', 'Intermediate', 'Advanced'].map(l => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
+            </SettingRow>
           </div>
 
-          {/* Settings Content */}
-          <div className="flex-1 space-y-4">
-
-            {activeSection === 'notifications' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
-                <h3 className="font-bold text-gray-200 text-lg flex items-center gap-2">
-                  🔔 Notification Settings
-                </h3>
-
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-3 border-b border-gray-800">
-                    <div>
-                      <p className="font-medium text-gray-200">Email Notifications</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Receive weekly progress reports by email</p>
-                    </div>
-                    <Toggle keyName="emailNotifications" />
-                  </div>
-
-                  {settings.emailNotifications && (
-                    <div className="bg-gray-800 rounded-xl p-4">
-                      <label className="text-sm text-gray-400 mb-2 block">Your Email Address:</label>
-                      <input
-                        type="email"
-                        value={settings.reminderEmail}
-                        onChange={e => handleChange('reminderEmail', e.target.value)}
-                        placeholder="your@email.com"
-                        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition text-sm"
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center py-3 border-b border-gray-800">
-                    <div>
-                      <p className="font-medium text-gray-200">Daily Practice Reminder</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Browser notification to remind you to practice</p>
-                    </div>
-                    <Toggle keyName="practiceReminder" />
-                  </div>
-
-                  {settings.practiceReminder && (
-                    <div className="bg-gray-800 rounded-xl p-4">
-                      <label className="text-sm text-gray-400 mb-2 block">Reminder Time:</label>
-                      <input
-                        type="time"
-                        value={settings.reminderTime}
-                        onChange={e => handleChange('reminderTime', e.target.value)}
-                        className="bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-purple-500 transition"
-                      />
-                      <p className="text-xs text-purple-400 mt-2">💡 Click Save to activate browser notification!</p>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center py-3 border-b border-gray-800">
-                    <div>
-                      <p className="font-medium text-gray-200">Weekly Progress Report</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Get a summary of your weekly achievements</p>
-                    </div>
-                    <Toggle keyName="weeklyReport" />
-                  </div>
-
-                  <div className="flex justify-between items-center py-3">
-                    <div>
-                      <p className="font-medium text-gray-200">Show Progress on Dashboard</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Display your stats on the main dashboard</p>
-                    </div>
-                    <Toggle keyName="showProgress" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'appearance' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
-                <h3 className="font-bold text-gray-200 text-lg">🎨 Appearance Settings</h3>
-
-                <div>
-                  <p className="font-medium text-gray-300 mb-3">Font Size</p>
-                  <div className="grid grid-cols-4 gap-3">
-                    {[
-                      { key: 'small', label: 'Small', size: 'text-xs' },
-                      { key: 'medium', label: 'Medium', size: 'text-sm' },
-                      { key: 'large', label: 'Large', size: 'text-base' },
-                      { key: 'xlarge', label: 'X-Large', size: 'text-lg' },
-                    ].map(option => (
-                      <button
-                        key={option.key}
-                        onClick={() => handleChange('fontSize', option.key)}
-                        className={`p-3 rounded-xl border-2 transition text-center ${
-                          settings.fontSize === option.key
-                            ? 'border-purple-500 bg-purple-900 bg-opacity-30'
-                            : 'border-gray-700 hover:border-gray-500'
-                        }`}
-                      >
-                        <p className={`font-bold text-white ${option.size}`}>Aa</p>
-                        <p className="text-xs text-gray-400 mt-1">{option.label}</p>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-purple-400 mt-2">💡 Font size changes instantly when you click!</p>
-                </div>
-
-                <div className="border-t border-gray-800 pt-4">
-                  <p className="font-medium text-gray-300 mb-3">Interface Language</p>
-                  <select
-                    value={settings.language}
-                    onChange={e => handleChange('language', e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition"
-                  >
-                    {['English', 'Hindi', 'Mandarin', 'Arabic', 'Spanish', 'Punjabi', 'French'].map(lang => (
-                      <option key={lang}>{lang}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'audio' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
-                <h3 className="font-bold text-gray-200 text-lg">🔊 Audio Settings</h3>
-
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-3 border-b border-gray-800">
-                    <div>
-                      <p className="font-medium text-gray-200">Sound Effects</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Play sounds for achievements and correct answers</p>
-                    </div>
-                    <Toggle keyName="soundEffects" />
-                  </div>
-
-                  <div className="flex justify-between items-center py-3">
-                    <div>
-                      <p className="font-medium text-gray-200">Auto-Speak AI Responses</p>
-                      <p className="text-xs text-gray-500 mt-0.5">AI automatically reads responses aloud in chat</p>
-                    </div>
-                    <Toggle keyName="autoSpeak" />
-                  </div>
-                </div>
-
-                <div className="bg-purple-900 bg-opacity-20 border border-purple-700 rounded-xl p-4">
-                  <p className="text-purple-300 text-sm font-medium mb-1">🎤 Test Your Audio</p>
-                  <p className="text-gray-400 text-xs mb-3">Click to hear a sample pronunciation</p>
-                  <button
-                    onClick={() => {
-                      if ('speechSynthesis' in window) {
-                        const u = new SpeechSynthesisUtterance('Hello! Welcome to BridgeVoice. Your audio is working perfectly!')
-                        u.lang = 'en-CA'
-                        window.speechSynthesis.speak(u)
-                      }
-                    }}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition hover:opacity-90"
-                  >
-                    🔊 Test Audio
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'learning' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
-                <h3 className="font-bold text-gray-200 text-lg">🎯 Learning Preferences</h3>
-
-                <div>
-                  <p className="font-medium text-gray-300 mb-3">Daily Session Goal</p>
-                  <div className="grid grid-cols-5 gap-3">
-                    {['1', '2', '3', '5', '10'].map(num => (
-                      <button
-                        key={num}
-                        onClick={() => handleChange('dailyGoal', num)}
-                        className={`p-3 rounded-xl border-2 transition text-center ${
-                          settings.dailyGoal === num
-                            ? 'border-purple-500 bg-purple-900 bg-opacity-30'
-                            : 'border-gray-700 hover:border-gray-500'
-                        }`}
-                      >
-                        <p className="text-xl font-bold text-white">{num}</p>
-                        <p className="text-xs text-gray-400 mt-1">session{num !== '1' ? 's' : ''}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-800 pt-4">
-                  <p className="font-medium text-gray-300 mb-2">Current Goal</p>
-                  <div className="bg-gradient-to-r from-purple-900 to-blue-900 border border-purple-700 rounded-xl p-4 text-center">
-                    <p className="text-3xl font-bold text-white">{settings.dailyGoal}</p>
-                    <p className="text-purple-300 text-sm">session{settings.dailyGoal !== '1' ? 's' : ''} per day</p>
-                    <div className="w-full bg-gray-800 rounded-full h-2 mt-3">
-                      <div
-                        className="bg-gradient-to-r from-purple-600 to-blue-600 h-2 rounded-full"
-                        style={{ width: `${(1 / parseInt(settings.dailyGoal)) * 100}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-gray-400 text-xs mt-2">1/{settings.dailyGoal} completed today</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'privacy' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
-                <h3 className="font-bold text-gray-200 text-lg">🔒 Privacy Settings</h3>
-
-                <div>
-                  <p className="font-medium text-gray-300 mb-3">Profile Visibility</p>
-                  <div className="space-y-3">
-                    {[
-                      { value: 'public', label: 'Everyone', desc: 'Anyone on BridgeVoice can see your profile', icon: '🌍' },
-                      { value: 'buddies', label: 'Study Buddies Only', desc: 'Only your connected study buddies', icon: '🤝' },
-                      { value: 'private', label: 'Private', desc: 'Nobody can see your profile', icon: '🔒' },
-                    ].map(option => (
-                      <button
-                        key={option.value}
-                        onClick={() => handleChange('privacy', option.value)}
-                        className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition text-left ${
-                          settings.privacy === option.value
-                            ? 'border-purple-500 bg-purple-900 bg-opacity-20'
-                            : 'border-gray-700 hover:border-gray-500'
-                        }`}
-                      >
-                        <span className="text-2xl">{option.icon}</span>
-                        <div className="flex-1">
-                          <p className="font-medium text-white">{option.label}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{option.desc}</p>
-                        </div>
-                        {settings.privacy === option.value && <span className="text-purple-400">✓</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'account' && (
-              <div className="space-y-4">
-                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-3">
-                  <h3 className="font-bold text-gray-200 text-lg">👤 Account Settings</h3>
-                  {[
-                    { icon: '🔒', label: 'Change Password', desc: 'Update your account password' },
-                    { icon: '📧', label: 'Change Email', desc: 'Update your email address' },
-                    { icon: '📥', label: 'Download My Data', desc: 'Export all your learning data' },
-                    { icon: '🔄', label: 'Reset Progress', desc: 'Start your learning journey fresh' },
-                  ].map((item, i) => (
-                    <button
-                      key={i}
-                      className="w-full flex items-center gap-4 px-4 py-3 rounded-xl border border-gray-700 hover:border-gray-500 hover:bg-gray-800 transition group"
-                    >
-                      <span className="text-xl">{item.icon}</span>
-                      <div className="flex-1 text-left">
-                        <p className="font-medium text-gray-200 text-sm">{item.label}</p>
-                        <p className="text-xs text-gray-500">{item.desc}</p>
-                      </div>
-                      <span className="text-gray-600 group-hover:text-gray-400 transition">→</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="bg-red-900 bg-opacity-10 border border-red-900 rounded-2xl p-6">
-                  <h3 className="font-bold text-red-400 text-lg mb-4">⚠️ Danger Zone</h3>
-                  <p className="text-gray-400 text-sm mb-4">Once you delete your account all your data will be permanently removed. This action cannot be undone!</p>
-                  <button
-                    onClick={handleDeleteAccount}
-                    className="bg-red-900 bg-opacity-30 hover:bg-opacity-50 border border-red-700 text-red-400 px-5 py-3 rounded-xl transition font-medium w-full"
-                  >
-                    🗑️ Delete My Account
-                  </button>
-                </div>
-              </div>
-            )}
-
+          <div className="border-t border-gray-800">
+            <SettingRow
+              icon="🎯"
+              title="Daily Goal"
+              desc="How many sessions you want to complete each day"
+            >
+              <select
+                value={settings.dailyGoal}
+                onChange={e => updateSetting('dailyGoal', e.target.value)}
+                className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 transition text-xs"
+              >
+                {['1', '2', '3', '5', '10'].map(n => (
+                  <option key={n} value={n}>{n} session{n !== '1' ? 's' : ''}/day</option>
+                ))}
+              </select>
+            </SettingRow>
           </div>
         </div>
 
-        {/* Save Button Bottom */}
+        {/* Notifications */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <SectionHeader title="Notifications" />
+
+          <SettingRow
+            icon="🔔"
+            title="Push Notifications"
+            desc="Get notified about your progress and streaks"
+          >
+            <Toggle value={settings.notifications} onToggle={() => toggle('notifications')} />
+          </SettingRow>
+
+          <div className="border-t border-gray-800">
+            <SettingRow
+              icon="⏰"
+              title="Daily Reminder"
+              desc="Remind me to practice every day"
+            >
+              <Toggle value={settings.dailyReminder} onToggle={() => toggle('dailyReminder')} />
+            </SettingRow>
+          </div>
+
+          {settings.dailyReminder && (
+            <div className="border-t border-gray-800">
+              <SettingRow
+                icon="🕐"
+                title="Reminder Time"
+                desc="What time should we remind you?"
+              >
+                <input
+                  type="time"
+                  value={settings.reminderTime}
+                  onChange={e => updateSetting('reminderTime', e.target.value)}
+                  className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 transition text-xs"
+                />
+              </SettingRow>
+            </div>
+          )}
+        </div>
+
+        {/* Audio Settings */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <SectionHeader title="Audio" />
+
+          <SettingRow
+            icon="🔊"
+            title="Sound Effects"
+            desc="Play sounds for correct and wrong answers"
+          >
+            <Toggle value={settings.soundEffects} onToggle={() => toggle('soundEffects')} />
+          </SettingRow>
+
+          <div className="border-t border-gray-800">
+            <SettingRow
+              icon="🤖"
+              title="Auto Speak"
+              desc="AI automatically reads responses out loud"
+            >
+              <Toggle value={settings.autoSpeak} onToggle={() => toggle('autoSpeak')} />
+            </SettingRow>
+          </div>
+        </div>
+
+        {/* Display */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <SectionHeader title="Display" />
+
+          <SettingRow
+            icon="🌙"
+            title="Dark Mode"
+            desc="BridgeVoice looks best in dark mode"
+          >
+            <Toggle value={settings.darkMode} onToggle={() => toggle('darkMode')} />
+          </SettingRow>
+
+          <div className="border-t border-gray-800">
+            <SettingRow
+              icon="🔤"
+              title="Font Size"
+              desc="Adjust the text size across the app"
+            >
+              <div className="flex gap-1">
+                {['Small', 'Medium', 'Large'].map(size => (
+                  <button
+                    key={size}
+                    onClick={() => updateSetting('fontSize', size)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                      settings.fontSize === size
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </SettingRow>
+          </div>
+        </div>
+
+        {/* Account */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <SectionHeader title="Account" />
+
+          <SettingRow
+            icon="👤"
+            title="Edit Profile"
+            desc="Update your name, photo and learning goals"
+          >
+            <button
+              onClick={() => navigate('/profile')}
+              className="border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-xl text-xs font-medium transition"
+            >
+              Go →
+            </button>
+          </SettingRow>
+
+          <div className="border-t border-gray-800">
+            <SettingRow
+              icon="💎"
+              title="Upgrade Plan"
+              desc="Unlock unlimited access to all features"
+            >
+              <button
+                onClick={() => navigate('/pricing')}
+                className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition"
+              >
+                Upgrade
+              </button>
+            </SettingRow>
+          </div>
+
+          <div className="border-t border-gray-800">
+            <SettingRow
+              icon="🔑"
+              title="Change Password"
+              desc="Update your account password"
+            >
+              <button className="border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-xl text-xs font-medium transition">
+                Change
+              </button>
+            </SettingRow>
+          </div>
+
+          <div className="border-t border-gray-800">
+            <SettingRow
+              icon="📤"
+              title="Sign Out"
+              desc="Sign out of your BridgeVoice account"
+            >
+              <button
+                onClick={() => {
+                  localStorage.removeItem('token')
+                  localStorage.removeItem('email')
+                  navigate('/login')
+                }}
+                className="border border-gray-700 hover:border-red-800 text-gray-400 hover:text-red-400 px-3 py-1.5 rounded-xl text-xs font-medium transition"
+              >
+                Sign Out
+              </button>
+            </SettingRow>
+          </div>
+        </div>
+
+        {/* Danger Zone */}
+        <div className="bg-gray-900 border border-red-900 border-opacity-50 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-red-900 border-opacity-30">
+            <p className="text-xs font-bold text-red-500 uppercase tracking-wider">Danger Zone</p>
+          </div>
+          <SettingRow
+            icon="🗑️"
+            title="Clear All Data"
+            desc="Delete all your progress, XP and saved data — cannot be undone"
+          >
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="border border-red-900 text-red-500 hover:bg-red-900 hover:bg-opacity-20 px-3 py-1.5 rounded-xl text-xs font-medium transition"
+            >
+              Clear
+            </button>
+          </SettingRow>
+        </div>
+
+        {/* Save Button */}
         <button
-          onClick={handleSave}
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-4 rounded-2xl font-bold text-lg transition shadow-xl shadow-purple-900"
+          onClick={saveSettings}
+          className="w-full bg-purple-600 hover:bg-purple-500 text-white py-3.5 rounded-2xl font-bold transition shadow-lg shadow-purple-900/40"
         >
           💾 Save All Settings
         </button>
 
+        {/* App Info */}
+        <div className="text-center space-y-1 pb-4">
+          <p className="text-gray-600 text-xs">BridgeVoice v1.0.0</p>
+          <p className="text-gray-700 text-xs">Built with ❤️ for newcomers to Canada</p>
+        </div>
+
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
+          <div className="relative max-w-sm w-full">
+            <div className="absolute inset-0 bg-red-900 rounded-2xl blur-xl opacity-10"></div>
+            <div className="relative bg-gray-900 border border-red-800 rounded-2xl p-6 shadow-2xl">
+              <p className="text-3xl text-center mb-3">⚠️</p>
+              <h3 className="text-lg font-bold text-white text-center mb-2">Clear All Data?</h3>
+              <p className="text-gray-400 text-sm text-center mb-5">
+                This will delete all your XP, progress, saved words and challenge history. This cannot be undone!
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 border border-gray-700 text-gray-300 hover:text-white py-2.5 rounded-xl text-sm font-medium transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={clearData}
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-xl text-sm font-bold transition"
+                >
+                  Yes, Clear
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   )
 }
