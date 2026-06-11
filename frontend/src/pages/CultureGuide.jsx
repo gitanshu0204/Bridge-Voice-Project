@@ -13,14 +13,14 @@ function CultureGuide() {
   const [userQuestion, setUserQuestion] = useState('')
 
   const categories = [
-    { id: 'workplace', icon: '🏢', title: 'Workplace', color: 'from-purple-600 to-purple-800' },
-    { id: 'social', icon: '🤝', title: 'Social Life', color: 'from-blue-600 to-blue-800' },
-    { id: 'holidays', icon: '🍁', title: 'Holidays', color: 'from-red-600 to-red-800' },
-    { id: 'food', icon: '🍽️', title: 'Food Culture', color: 'from-orange-600 to-orange-800' },
-    { id: 'transport', icon: '🚌', title: 'Transportation', color: 'from-green-600 to-green-800' },
-    { id: 'healthcare', icon: '🏥', title: 'Healthcare', color: 'from-pink-600 to-pink-800' },
-    { id: 'education', icon: '📚', title: 'Education', color: 'from-cyan-600 to-cyan-800' },
-    { id: 'banking', icon: '🏦', title: 'Banking', color: 'from-yellow-600 to-yellow-800' },
+    { id: 'workplace', icon: '🏢', title: 'Workplace' },
+    { id: 'social', icon: '🤝', title: 'Social Life' },
+    { id: 'holidays', icon: '🍁', title: 'Holidays' },
+    { id: 'food', icon: '🍽️', title: 'Food' },
+    { id: 'transport', icon: '🚌', title: 'Transport' },
+    { id: 'healthcare', icon: '🏥', title: 'Healthcare' },
+    { id: 'education', icon: '📚', title: 'Education' },
+    { id: 'banking', icon: '🏦', title: 'Banking' },
   ]
 
   const content = {
@@ -37,12 +37,12 @@ function CultureGuide() {
       { title: 'Personal Space', icon: '↔️', content: 'Canadians like personal space — about an arm\'s length distance when talking. They greet with a handshake, not a kiss on the cheek like some cultures. Good friends may hug.', tip: 'A firm handshake and eye contact makes a great first impression!' },
       { title: 'Tipping Culture', icon: '💰', content: 'Tipping is expected in Canada. Restaurant servers: 15-20%. Hair stylists: 15-20%. Taxi/Uber drivers: 10-15%. Not tipping is considered rude.', tip: 'A quick way: move the decimal and multiply by 1.5 for 15%' },
       { title: 'Diversity and Inclusion', icon: '🌍', content: 'Canada is very multicultural and proud of it. Canadians are generally very welcoming of different cultures, religions and backgrounds. Discrimination is taken very seriously.', tip: 'Share your culture! Canadians love learning about other cultures.' },
-      { title: 'Queuing (Standing in Line)', icon: '🚶', content: 'Canadians take queuing very seriously. Always stand in line and wait your turn. Cutting in line is considered very rude.', tip: 'If you accidentally cut a line, apologize immediately!' },
+      { title: 'Queuing', icon: '🚶', content: 'Canadians take queuing very seriously. Always stand in line and wait your turn. Cutting in line is considered very rude.', tip: 'If you accidentally cut a line, apologize immediately!' },
       { title: 'Holding Doors Open', icon: '🚪', content: 'It is very common and polite to hold the door open for the person behind you. If someone holds a door for you, always say "Thank you".', tip: 'Always say thank you when someone holds a door!' },
     ],
     holidays: [
       { title: 'Canada Day — July 1st', icon: '🎆', content: 'Canada\'s birthday! Celebrates when Canada became a country in 1867. There are fireworks, parades and outdoor events everywhere. Wear red and white!', tip: 'Great day to meet neighbours and explore your city!' },
-      { title: 'Thanksgiving — Second Monday of October', icon: '🦃', content: 'Canadian Thanksgiving is in October. Families gather for a big meal with turkey, stuffing and pumpkin pie. It is about being grateful.', tip: 'If invited to someone\'s Thanksgiving, bring a dessert or wine!' },
+      { title: 'Thanksgiving — October', icon: '🦃', content: 'Canadian Thanksgiving is in October. Families gather for a big meal with turkey, stuffing and pumpkin pie. It is about being grateful.', tip: 'If invited to someone\'s Thanksgiving, bring a dessert or wine!' },
       { title: 'Christmas — December 25th', icon: '🎄', content: 'Very widely celebrated even by non-Christians. Most businesses close. Gift giving, family dinners and decorations are common. Many Canadians say "Happy Holidays" to be inclusive.', tip: 'Say "Happy Holidays" to be inclusive to everyone!' },
       { title: 'Remembrance Day — November 11th', icon: '🌹', content: 'A very solemn day to honour soldiers who died in wars. Many people wear a red poppy pin. There is a moment of silence at 11am. Most stores close.', tip: 'Wear a red poppy and observe the moment of silence at 11am.' },
       { title: 'Halloween — October 31st', icon: '🎃', content: 'Children dress in costumes and go door-to-door saying "Trick or Treat" for candy. Adults also celebrate with parties. Decorating your home is common and fun.', tip: 'Buy candy to give to children who knock on your door!' },
@@ -69,7 +69,7 @@ function CultureGuide() {
       { title: 'School System', icon: '🏫', content: 'School is free from Kindergarten to Grade 12. Children must attend school until age 16. School year runs September to June.', tip: 'Register your children for school as soon as you arrive!' },
       { title: 'College vs University', icon: '🎓', content: 'College offers practical 2-3 year programs. University offers 4-year degree programs. Both are respected. College is often better for getting a job quickly.', tip: 'Research both options carefully before deciding!' },
       { title: 'Free English Classes', icon: '📝', content: 'Free English classes (LINC) are available for newcomers. Settlement agencies offer free programs. Libraries also offer free English conversation groups.', tip: 'Search for LINC classes in your city — they are completely free!' },
-      { title: 'Canadian Credential Recognition', icon: '📜', content: 'Your foreign degree may need to be assessed. Use World Education Services (WES) to get your credentials evaluated. This is important for professional jobs.', tip: 'Get your WES assessment done early — it takes several weeks!' },
+      { title: 'Credential Recognition', icon: '📜', content: 'Your foreign degree may need to be assessed. Use World Education Services (WES) to get your credentials evaluated. This is important for professional jobs.', tip: 'Get your WES assessment done early — it takes several weeks!' },
     ],
     banking: [
       { title: 'Opening a Bank Account', icon: '🏦', content: 'You need a bank account to receive salary, pay rent and bills. Bring your passport and proof of address. Major banks: TD, RBC, Scotiabank, BMO, CIBC. Most offer newcomer packages.', tip: 'TD and RBC have excellent newcomer banking packages!' },
@@ -79,7 +79,7 @@ function CultureGuide() {
     ],
   }
 
-  const callAI = async (topic, content, action, question = '') => {
+  const callAI = async (topic, topicContent, action, question = '') => {
     setAiLoading(true)
     setAiResponse('')
     try {
@@ -88,7 +88,7 @@ function CultureGuide() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic,
-          content,
+          content: topicContent,
           action,
           native_language: nativeLanguage,
           question
@@ -108,52 +108,52 @@ function CultureGuide() {
     <Layout>
       <div className="max-w-4xl mx-auto space-y-6">
 
-        {/* Header */}
-        <div>
-          <h2 className="text-2xl font-bold">🍁 Canadian Culture Guide</h2>
-          <p className="text-gray-400 mt-1">Everything you need to know about life in Canada</p>
-        </div>
-
-        {/* Welcome Banner - 3D */}
-        <div className="relative transform hover:scale-[1.01] transition duration-300">
-          <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-800 rounded-3xl blur-xl opacity-20"></div>
-          <div className="relative bg-gradient-to-r from-red-900 via-gray-900 to-blue-900 border border-red-800 rounded-3xl p-8 overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-red-700 rounded-full filter blur-3xl opacity-10"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-700 rounded-full filter blur-3xl opacity-10"></div>
-            <div className="relative flex justify-between items-center">
-              <div>
-                <h3 className="text-2xl font-bold text-white mb-2">Welcome to Canada! 🍁</h3>
-                <p className="text-gray-300 max-w-lg">This guide will help you understand Canadian culture, workplace etiquette, and daily life so you can feel confident in your new home.</p>
-                <div className="flex gap-4 mt-4">
-                  {[
-                    { value: '8', label: 'Categories' },
-                    { value: '40+', label: 'Topics' },
-                    { value: '🤖', label: 'AI Powered' },
-                  ].map((stat, i) => (
-                    <div key={i} className="bg-black bg-opacity-40 border border-red-500 border-opacity-30 rounded-xl px-4 py-2 text-center hover:border-opacity-60 transition">
-                      <p className="text-xl font-bold text-white">{stat.value}</p>
-                      <p className="text-xs text-gray-300">{stat.label}</p>
-                    </div>
-                  ))}
-                </div>
+        {/* Hero */}
+        <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-gray-900 to-gray-900 opacity-60"></div>
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
+          <div className="relative p-8 flex justify-between items-center">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-red-400">🍁</span>
+                <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Canadian Culture Guide</span>
               </div>
-              <p className="text-8xl hidden md:block">🍁</p>
+              <h2 className="text-3xl font-bold text-white mb-2">Welcome to Canada</h2>
+              <p className="text-gray-400 max-w-md text-sm leading-relaxed">
+                Everything you need to know about Canadian culture, workplace etiquette, and daily life — with AI explanations in your language.
+              </p>
+              <div className="flex items-center gap-4 mt-4">
+                {[
+                  { value: '8', label: 'Categories' },
+                  { value: '40+', label: 'Topics' },
+                  { value: 'AI', label: 'Powered' },
+                ].map((stat, i) => (
+                  <div key={i}>
+                    <p className="text-lg font-bold text-purple-400">{stat.value}</p>
+                    <p className="text-gray-500 text-xs">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
+            <div className="hidden md:block text-8xl opacity-10">🍁</div>
           </div>
         </div>
 
-        {/* Native Language Selector */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex items-center gap-4 flex-wrap">
-          <p className="text-sm font-semibold text-gray-300">🌍 Your Language (for AI explanations):</p>
-          <div className="flex gap-2 flex-wrap">
+        {/* Language Selector */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl px-5 py-4 flex items-center gap-4 flex-wrap">
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">AI Language</p>
+            <p className="text-gray-600 text-xs mt-0.5">Explanations will be in your language</p>
+          </div>
+          <div className="flex gap-2 flex-wrap flex-1">
             {['Hindi', 'Punjabi', 'Mandarin', 'Arabic', 'Spanish', 'French', 'Tagalog', 'Urdu'].map(lang => (
               <button
                 key={lang}
                 onClick={() => setNativeLanguage(lang)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                   nativeLanguage === lang
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                    : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white'
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                    : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
                 }`}
               >
                 {lang}
@@ -162,49 +162,52 @@ function CultureGuide() {
           </div>
         </div>
 
-        {/* Category Grid */}
-        <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+        {/* Category Tabs */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-2 flex gap-1 overflow-x-auto">
           {categories.map(cat => (
             <button
               key={cat.id}
-              onClick={() => { setActiveCategory(cat.id); setExpandedItem(null); setAiMode(null); setAiResponse('') }}
-              className={`relative flex flex-col items-center gap-2 p-3 rounded-2xl transition group overflow-hidden ${
-                activeCategory === cat.id ? 'scale-105 shadow-xl' : 'hover:scale-105'
+              onClick={() => {
+                setActiveCategory(cat.id)
+                setExpandedItem(null)
+                setAiMode(null)
+                setAiResponse('')
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition whitespace-nowrap flex-shrink-0 ${
+                activeCategory === cat.id
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${cat.color} ${
-                activeCategory === cat.id ? 'opacity-100' : 'opacity-30 group-hover:opacity-60'
-              } transition rounded-2xl`}></div>
-              <span className="relative text-2xl group-hover:scale-110 transition">{cat.icon}</span>
-              <span className="relative text-xs font-bold text-white text-center leading-tight">{cat.title}</span>
+              <span>{cat.icon}</span>
+              <span>{cat.title}</span>
             </button>
           ))}
         </div>
 
         {/* Category Header */}
-        {currentCategory && (
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 bg-gradient-to-br ${currentCategory.color} rounded-xl flex items-center justify-center text-2xl shadow-lg`}>
-              {currentCategory.icon}
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-200 text-lg">{currentCategory.title}</h3>
-              <p className="text-gray-500 text-xs">{content[activeCategory].length} topics • Click any topic to expand + get AI help</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-purple-600 bg-opacity-20 border border-purple-800 rounded-xl flex items-center justify-center text-xl">
+            {currentCategory?.icon}
           </div>
-        )}
+          <div>
+            <h3 className="font-bold text-white">{currentCategory?.title}</h3>
+            <p className="text-gray-500 text-xs">{content[activeCategory]?.length} topics • Click to expand and get AI help</p>
+          </div>
+        </div>
 
-        {/* Topics List */}
-        <div className="space-y-3">
-          {content[activeCategory].map((item, i) => (
+        {/* Topics */}
+        <div className="space-y-2">
+          {content[activeCategory]?.map((item, i) => (
             <div
               key={i}
-              className={`bg-gray-900 border rounded-2xl overflow-hidden transition ${
+              className={`bg-gray-900 border rounded-2xl overflow-hidden transition-all duration-200 ${
                 expandedItem === i
-                  ? 'border-purple-700 shadow-lg shadow-purple-900'
-                  : 'border-gray-800 hover:border-gray-600'
+                  ? 'border-purple-800'
+                  : 'border-gray-800 hover:border-gray-700'
               }`}
             >
+              {/* Topic Header */}
               <button
                 onClick={() => {
                   setExpandedItem(expandedItem === i ? null : i)
@@ -215,45 +218,65 @@ function CultureGuide() {
                 className="w-full text-left px-6 py-4 flex justify-between items-center group"
               >
                 <div className="flex items-center gap-4">
-                  <span className="text-2xl group-hover:scale-110 transition">{item.icon}</span>
-                  <p className="font-semibold text-gray-200">{item.title}</p>
+                  <span className="text-xl group-hover:scale-110 transition-transform">{item.icon}</span>
+                  <div>
+                    <p className="font-semibold text-gray-200 group-hover:text-white transition-colors">{item.title}</p>
+                  </div>
                 </div>
-                <span className={`text-gray-500 text-xl transition-transform duration-300 ${expandedItem === i ? 'rotate-180' : ''}`}>▾</span>
+                <div className={`w-6 h-6 rounded-full border border-gray-700 flex items-center justify-center text-gray-500 transition-all ${
+                  expandedItem === i ? 'bg-purple-600 border-purple-600 text-white rotate-180' : 'group-hover:border-gray-500'
+                }`}>
+                  ▾
+                </div>
               </button>
 
+              {/* Expanded Content */}
               {expandedItem === i && (
-                <div className="border-t border-gray-800 px-6 pb-5 pt-4 space-y-4">
+                <div className="border-t border-gray-800">
 
-                  <p className="text-gray-300 leading-relaxed">{item.content}</p>
+                  {/* Main Content */}
+                  <div className="px-6 py-5">
+                    <div className="relative pl-4 border-l-2 border-purple-600">
+                      <p className="text-gray-300 text-sm leading-relaxed">{item.content}</p>
+                    </div>
 
-                  <div className="bg-yellow-900 bg-opacity-20 border border-yellow-800 rounded-xl px-4 py-3">
-                    <p className="text-xs font-semibold text-yellow-400 mb-1">💡 Pro Tip:</p>
-                    <p className="text-sm text-gray-300">{item.tip}</p>
+                    <div className="flex items-start gap-2 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 mt-4">
+                      <span className="text-yellow-500 text-sm mt-0.5 flex-shrink-0">💡</span>
+                      <p className="text-gray-400 text-sm">{item.tip}</p>
+                    </div>
                   </div>
 
                   {/* AI Section */}
-                  <div className="bg-purple-900 bg-opacity-20 border border-purple-700 rounded-xl p-4">
-                    <p className="text-sm font-bold text-purple-300 mb-3">🤖 Ask AI About This Topic</p>
+                  <div className="border-t border-gray-800 px-6 py-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                        <span className="w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center text-xs">🤖</span>
+                        Ask AI About This
+                      </p>
+                    </div>
 
-                    <div className="flex gap-2 flex-wrap mb-3">
-                      <button
-                        onClick={() => { setAiMode(`explain-${i}`); callAI(item.title, item.content, 'explain') }}
-                        className="bg-blue-900 bg-opacity-50 border border-blue-700 text-blue-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                      >
-                        📖 Explain Simply
-                      </button>
-                      <button
-                        onClick={() => { setAiMode(`translate-${i}`); callAI(item.title, item.content, 'translate') }}
-                        className="bg-green-900 bg-opacity-50 border border-green-700 text-green-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                      >
-                        🌍 Explain in {nativeLanguage}
-                      </button>
-                      <button
-                        onClick={() => { setAiMode(`compare-${i}`); callAI(item.title, item.content, 'compare') }}
-                        className="bg-orange-900 bg-opacity-50 border border-orange-700 text-orange-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                      >
-                        🔄 Compare with my culture
-                      </button>
+                    <div className="flex gap-2 mb-4 flex-wrap">
+                      {[
+                        { action: 'explain', label: 'Explain Simply', icon: '📖' },
+                        { action: 'translate', label: `In ${nativeLanguage}`, icon: '🌍' },
+                        { action: 'compare', label: 'Compare Cultures', icon: '🔄' },
+                      ].map(btn => (
+                        <button
+                          key={btn.action}
+                          onClick={() => {
+                            setAiMode(`${btn.action}-${i}`)
+                            callAI(item.title, item.content, btn.action)
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition border ${
+                            aiMode === `${btn.action}-${i}`
+                              ? 'border-purple-600 bg-purple-900 bg-opacity-30 text-purple-300'
+                              : 'border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white'
+                          }`}
+                        >
+                          <span>{btn.icon}</span>
+                          {btn.label}
+                        </button>
+                      ))}
                     </div>
 
                     {/* Custom Question */}
@@ -262,33 +285,45 @@ function CultureGuide() {
                         type="text"
                         value={userQuestion}
                         onChange={e => setUserQuestion(e.target.value)}
+                        onKeyPress={e => {
+                          if (e.key === 'Enter' && userQuestion.trim()) {
+                            setAiMode(`question-${i}`)
+                            callAI(item.title, item.content, 'question', userQuestion)
+                          }
+                        }}
                         placeholder="Ask anything about this topic..."
-                        className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition text-xs"
+                        className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition text-xs"
                       />
                       <button
-                        onClick={() => { setAiMode(`question-${i}`); callAI(item.title, item.content, 'question', userQuestion) }}
+                        onClick={() => {
+                          if (userQuestion.trim()) {
+                            setAiMode(`question-${i}`)
+                            callAI(item.title, item.content, 'question', userQuestion)
+                          }
+                        }}
                         disabled={!userQuestion.trim()}
-                        className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-3 py-2 rounded-xl text-xs font-medium transition disabled:opacity-50"
+                        className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40"
                       >
-                        Ask 🤖
+                        Ask
                       </button>
                     </div>
 
-                    {aiLoading && aiMode && aiMode.endsWith(`-${i}`) && (
-                      <div className="flex gap-2 mt-3">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    {/* AI Loading */}
+                    {aiLoading && aiMode?.endsWith(`-${i}`) && (
+                      <div className="flex items-center gap-2 mt-4">
+                        <div className="w-4 h-4 border border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-gray-500 text-xs">AI is thinking...</span>
                       </div>
                     )}
 
-                    {aiResponse && aiMode && aiMode.endsWith(`-${i}`) && !aiLoading && (
-                      <div className="mt-3 bg-gray-800 border border-gray-700 rounded-xl p-4">
-                        <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-line">{aiResponse}</p>
+                    {/* AI Response */}
+                    {aiResponse && aiMode?.endsWith(`-${i}`) && !aiLoading && (
+                      <div className="mt-4 relative pl-4 border-l-2 border-purple-600 bg-gray-800 border border-gray-700 rounded-xl p-4">
+                        <p className="text-xs font-semibold text-purple-400 mb-2">🤖 AI Response</p>
+                        <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{aiResponse}</p>
                       </div>
                     )}
                   </div>
-
                 </div>
               )}
             </div>
@@ -300,4 +335,4 @@ function CultureGuide() {
   )
 }
 
-export default CultureGuide 
+export default CultureGuide

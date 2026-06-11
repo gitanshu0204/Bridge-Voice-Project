@@ -39,6 +39,7 @@ function Layout({ children }) {
     { section: 'ACCOUNT', items: [
       { to: '/profile', icon: '👤', label: 'Profile' },
       { to: '/settings', icon: '⚙️', label: 'Settings' },
+      { to: '/pricing', icon: '💎', label: 'Upgrade' },
     ]},
   ]
 

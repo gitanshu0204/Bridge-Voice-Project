@@ -16,12 +16,12 @@ function Phrases() {
   const [nativeLanguage, setNativeLanguage] = useState('Hindi')
 
   const categories = [
-    { id: 'workplace', icon: '🏢', title: 'Workplace', color: 'from-purple-600 to-purple-800', count: 10 },
-    { id: 'social', icon: '🤝', title: 'Social', color: 'from-blue-600 to-blue-800', count: 7 },
-    { id: 'canadian', icon: '🍁', title: 'Canadian', color: 'from-red-600 to-red-800', count: 7 },
-    { id: 'interview', icon: '💼', title: 'Interview', color: 'from-green-600 to-green-800', count: 7 },
-    { id: 'daily', icon: '☀️', title: 'Daily Life', color: 'from-yellow-600 to-yellow-800', count: 6 },
-    { id: 'slang', icon: '😎', title: 'Slang', color: 'from-pink-600 to-pink-800', count: 6 },
+    { id: 'workplace', icon: '🏢', title: 'Workplace' },
+    { id: 'social', icon: '🤝', title: 'Social' },
+    { id: 'canadian', icon: '🍁', title: 'Canadian' },
+    { id: 'interview', icon: '💼', title: 'Interview' },
+    { id: 'daily', icon: '☀️', title: 'Daily Life' },
+    { id: 'slang', icon: '😎', title: 'Slang' },
   ]
 
   const phrases = {
@@ -33,9 +33,9 @@ function Phrases() {
       { phrase: 'Take it offline', meaning: 'Discuss something privately outside the meeting', example: 'This is a detailed topic — let\'s take it offline.', tip: 'Use when a topic needs more time than the meeting allows.', level: 'Professional' },
       { phrase: 'Bandwidth', meaning: 'The capacity or time someone has to do work', example: 'Do you have the bandwidth to take on this project?', tip: 'Used to ask if someone has enough time or energy.', level: 'Professional' },
       { phrase: 'Low hanging fruit', meaning: 'Easy tasks or goals that can be achieved quickly', example: 'Let\'s tackle the low hanging fruit first.', tip: 'Use when suggesting starting with the easiest tasks.', level: 'Common' },
-      { phrase: 'Move the needle', meaning: 'To make a noticeable difference or progress', example: 'We need a strategy that will really move the needle.', tip: 'Common in business discussions about results.', level: 'Professional' },
       { phrase: 'Deep dive', meaning: 'A thorough examination of a subject', example: 'Let\'s do a deep dive into the sales data.', tip: 'Use when you want to analyze something in detail.', level: 'Common' },
       { phrase: 'Action item', meaning: 'A task that someone needs to complete', example: 'The action item from today\'s meeting is to send the report.', tip: 'Very common in meetings and emails.', level: 'Essential' },
+      { phrase: 'Move the needle', meaning: 'To make a noticeable difference or progress', example: 'We need a strategy that will really move the needle.', tip: 'Common in business discussions about results.', level: 'Professional' },
     ],
     social: [
       { phrase: 'How\'s it going?', meaning: 'A casual greeting asking how you are', example: 'Hey! How\'s it going?', tip: 'More casual than "How are you?" — very common in Canada.', level: 'Essential' },
@@ -86,7 +86,6 @@ function Phrases() {
     phrase: 'Hit the ground running',
     meaning: 'Start something quickly and with great energy',
     example: 'I want someone who can hit the ground running from day one.',
-    category: 'Interview',
     tip: 'Use this in job interviews to show you are ready to start immediately!'
   }
 
@@ -125,9 +124,7 @@ function Phrases() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phrase,
-          meaning,
-          action,
+          phrase, meaning, action,
           user_response: userResponse,
           native_language: nativeLanguage
         })
@@ -140,16 +137,16 @@ function Phrases() {
     setAiLoading(false)
   }
 
-  const getLevelColor = (level) => {
-    const colors = {
-      'Essential': 'bg-green-900 bg-opacity-50 border-green-700 text-green-300',
-      'Must Know': 'bg-red-900 bg-opacity-50 border-red-700 text-red-300',
-      'Common': 'bg-blue-900 bg-opacity-50 border-blue-700 text-blue-300',
-      'Professional': 'bg-purple-900 bg-opacity-50 border-purple-700 text-purple-300',
-      'Casual': 'bg-orange-900 bg-opacity-50 border-orange-700 text-orange-300',
-      'Fun': 'bg-pink-900 bg-opacity-50 border-pink-700 text-pink-300',
+  const getLevelStyle = (level) => {
+    const styles = {
+      'Essential': 'text-green-400 bg-green-900 bg-opacity-20 border-green-800',
+      'Must Know': 'text-red-400 bg-red-900 bg-opacity-20 border-red-800',
+      'Common': 'text-blue-400 bg-blue-900 bg-opacity-20 border-blue-800',
+      'Professional': 'text-purple-400 bg-purple-900 bg-opacity-20 border-purple-800',
+      'Casual': 'text-yellow-400 bg-yellow-900 bg-opacity-20 border-yellow-800',
+      'Fun': 'text-pink-400 bg-pink-900 bg-opacity-20 border-pink-800',
     }
-    return colors[level] || 'bg-gray-800 border-gray-700 text-gray-300'
+    return styles[level] || 'text-gray-400 bg-gray-800 border-gray-700'
   }
 
   const currentCategory = categories.find(c => c.id === activeCategory)
@@ -158,77 +155,133 @@ function Phrases() {
     <Layout>
       <div className="max-w-4xl mx-auto space-y-6">
 
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h2 className="text-2xl font-bold">💬 English Phrases</h2>
-            <p className="text-gray-400 mt-1">Master Canadian idioms, workplace phrases and everyday expressions</p>
+        {/* Hero */}
+        <div className="relative bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-gray-900 to-gray-900 opacity-60"></div>
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
+          <div className="relative p-8 flex justify-between items-center">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
+                <span className="text-xs font-semibold text-gray-400 tracking-wider uppercase">English Phrases</span>
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">Master Canadian English</h2>
+              <p className="text-gray-400 text-sm max-w-md leading-relaxed">
+                Learn idioms, workplace phrases, and everyday expressions used by Canadians — with AI practice in your language.
+              </p>
+              <div className="flex items-center gap-4 mt-4">
+                {[
+                  { value: '6', label: 'Categories' },
+                  { value: '40+', label: 'Phrases' },
+                  { value: savedPhrases.length.toString(), label: 'Saved' },
+                ].map((stat, i) => (
+                  <div key={i}>
+                    <p className="text-lg font-bold text-purple-400">{stat.value}</p>
+                    <p className="text-gray-500 text-xs">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="hidden md:block text-8xl opacity-10">💬</div>
           </div>
-          {savedPhrases.length > 0 && (
-            <button
-              onClick={() => setShowSaved(!showSaved)}
-              className="bg-purple-900 bg-opacity-50 border border-purple-700 text-purple-300 hover:text-white px-4 py-2 rounded-xl text-sm font-medium transition"
-            >
-              ⭐ Saved ({savedPhrases.length})
-            </button>
-          )}
         </div>
 
-        {/* Phrase of the Day - 3D Card */}
-        <div className="relative transform hover:scale-[1.01] transition duration-300">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-3xl blur-xl opacity-20"></div>
-          <div className="relative bg-gradient-to-br from-purple-900 via-blue-900 to-gray-900 border border-purple-700 rounded-3xl p-8 overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600 rounded-full filter blur-3xl opacity-10"></div>
-            <div className="relative flex justify-between items-start">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400 text-xs font-bold px-3 py-1 rounded-full">✨ PHRASE OF THE DAY</span>
-                  <span className="bg-green-900 bg-opacity-50 border border-green-700 text-green-300 text-xs font-bold px-3 py-1 rounded-full">Interview</span>
-                </div>
-                <h3 className="text-4xl font-bold text-white mb-3">"{phraseOfTheDay.phrase}"</h3>
-                <p className="text-gray-300 text-lg mb-3">{phraseOfTheDay.meaning}</p>
-                <p className="text-gray-400 italic mb-4">"{phraseOfTheDay.example}"</p>
-                <p className="text-yellow-400 text-sm">💡 {phraseOfTheDay.tip}</p>
-              </div>
-              <button
-                onClick={() => speakPhrase(phraseOfTheDay.phrase)}
-                className="w-12 h-12 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-xl flex items-center justify-center text-xl transition ml-4"
-              >
-                🔊
-              </button>
+        {/* Phrase of the Day */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Phrase of the Day</p>
+            </div>
+            <button
+              onClick={() => speakPhrase(phraseOfTheDay.phrase)}
+              className="text-gray-600 hover:text-purple-400 transition text-lg"
+            >
+              🔊
+            </button>
+          </div>
+          <div className="p-6">
+            <div className="relative pl-4 border-l-2 border-purple-600">
+              <h3 className="text-2xl font-bold text-white mb-1">"{phraseOfTheDay.phrase}"</h3>
+              <p className="text-gray-400 text-sm mb-2">{phraseOfTheDay.meaning}</p>
+              <p className="text-gray-500 text-sm italic">"{phraseOfTheDay.example}"</p>
+            </div>
+            <div className="flex items-start gap-2 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 mt-4">
+              <span className="text-yellow-500 text-sm mt-0.5">💡</span>
+              <p className="text-gray-400 text-sm">{phraseOfTheDay.tip}</p>
             </div>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search any phrase or idiom..."
-            className="w-full bg-gray-900 border border-gray-700 rounded-2xl px-6 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition text-base pl-12"
-          />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-xl">🔍</span>
-          {searchTerm && (
-            <button onClick={() => setSearchTerm('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition">✕</button>
+        {/* Search + Controls */}
+        <div className="flex gap-3">
+          <div className="flex-1 relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600">🔍</span>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Search phrases..."
+              className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition text-sm"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white transition"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {savedPhrases.length > 0 && (
+            <button
+              onClick={() => setShowSaved(!showSaved)}
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition ${
+                showSaved
+                  ? 'border-purple-600 bg-purple-900 bg-opacity-30 text-purple-300'
+                  : 'border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white'
+              }`}
+            >
+              ⭐ {savedPhrases.length}
+            </button>
           )}
+        </div>
+
+        {/* Language Selector */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
+          <p className="text-xs text-gray-500 font-medium flex-shrink-0">AI Language:</p>
+          <div className="flex gap-2 flex-wrap">
+            {['Hindi', 'Punjabi', 'Mandarin', 'Arabic', 'Spanish', 'French', 'Tagalog', 'Urdu'].map(lang => (
+              <button
+                key={lang}
+                onClick={() => setNativeLanguage(lang)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
+                  nativeLanguage === lang
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white'
+                }`}
+              >
+                {lang}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Saved Phrases */}
         {showSaved && savedPhrases.length > 0 && (
-          <div className="bg-purple-900 bg-opacity-20 border border-purple-700 rounded-2xl p-5">
-            <h3 className="font-bold text-purple-300 mb-4">⭐ Saved Phrases ({savedPhrases.length})</h3>
-            <div className="space-y-2">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-800">
+              <p className="font-semibold text-white text-sm">⭐ Saved Phrases ({savedPhrases.length})</p>
+            </div>
+            <div className="divide-y divide-gray-800">
               {savedPhrases.map((p, i) => (
-                <div key={i} className="flex justify-between items-center bg-gray-900 border border-gray-800 rounded-xl px-4 py-3">
+                <div key={i} className="flex justify-between items-center px-5 py-3">
                   <div>
                     <p className="font-semibold text-white text-sm">"{p.phrase}"</p>
                     <p className="text-gray-500 text-xs mt-0.5">{p.meaning}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => speakPhrase(p.phrase)} className="text-gray-500 hover:text-purple-400 transition">🔊</button>
+                  <div className="flex gap-3">
+                    <button onClick={() => speakPhrase(p.phrase)} className="text-gray-600 hover:text-purple-400 transition">🔊</button>
                     <button onClick={() => toggleSave(p)} className="text-yellow-400 hover:text-gray-400 transition">⭐</button>
                   </div>
                 </div>
@@ -237,50 +290,58 @@ function Phrases() {
           </div>
         )}
 
-        {/* Category Cards */}
+        {/* Category Tabs */}
         {!searchTerm && (
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-2 flex gap-1 overflow-x-auto">
             {categories.map(cat => (
               <button
                 key={cat.id}
-                onClick={() => { setActiveCategory(cat.id); setExpandedPhrase(null); setAiMode(null); setAiResponse('') }}
-                className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl transition group overflow-hidden ${activeCategory === cat.id ? 'scale-105 shadow-xl' : 'hover:scale-105'}`}
+                onClick={() => {
+                  setActiveCategory(cat.id)
+                  setExpandedPhrase(null)
+                  setAiMode(null)
+                  setAiResponse('')
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition whitespace-nowrap flex-shrink-0 ${
+                  activeCategory === cat.id
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                }`}
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${cat.color} ${activeCategory === cat.id ? 'opacity-100' : 'opacity-30 group-hover:opacity-60'} transition rounded-2xl`}></div>
-                <span className="relative text-2xl group-hover:scale-110 transition">{cat.icon}</span>
-                <span className="relative text-xs font-bold text-white">{cat.title}</span>
-                <span className="relative text-xs text-white text-opacity-70">{cat.count} phrases</span>
+                <span>{cat.icon}</span>
+                <span>{cat.title}</span>
               </button>
             ))}
           </div>
         )}
 
         {/* Category Header */}
-        {!searchTerm && currentCategory && (
+        {!searchTerm && (
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 bg-gradient-to-br ${currentCategory.color} rounded-xl flex items-center justify-center text-xl`}>
-              {currentCategory.icon}
+            <div className="w-8 h-8 bg-purple-600 bg-opacity-20 border border-purple-800 rounded-lg flex items-center justify-center text-sm">
+              {currentCategory?.icon}
             </div>
             <div>
-              <h3 className="font-bold text-gray-200">{currentCategory.title} Phrases</h3>
-              <p className="text-gray-500 text-xs">{currentCategory.count} expressions to master</p>
+              <p className="font-semibold text-gray-200 text-sm">{currentCategory?.title} Phrases</p>
+              <p className="text-gray-600 text-xs">{filteredPhrases?.length} expressions</p>
             </div>
           </div>
         )}
 
         {searchTerm && (
-          <p className="text-gray-400 text-sm">{filteredPhrases.length} results for "{searchTerm}"</p>
+          <p className="text-gray-500 text-sm">{filteredPhrases?.length} results for "{searchTerm}"</p>
         )}
 
         {/* Phrases List */}
-        <div className="space-y-3">
-          {filteredPhrases.map((item, i) => (
+        <div className="space-y-2">
+          {filteredPhrases?.map((item, i) => (
             <div
               key={i}
-              className={`bg-gray-900 border rounded-2xl overflow-hidden transition group ${
-                expandedPhrase === i ? 'border-purple-700 shadow-lg shadow-purple-900' : 'border-gray-800 hover:border-gray-600'
+              className={`bg-gray-900 border rounded-2xl overflow-hidden transition-all duration-200 ${
+                expandedPhrase === i ? 'border-purple-800' : 'border-gray-800 hover:border-gray-700'
               }`}
             >
+              {/* Phrase Header */}
               <button
                 onClick={() => {
                   setExpandedPhrase(expandedPhrase === i ? null : i)
@@ -288,118 +349,123 @@ function Phrases() {
                   setAiResponse('')
                   setUserPractice('')
                 }}
-                className="w-full text-left px-6 py-4 flex justify-between items-center"
+                className="w-full text-left px-6 py-4 flex justify-between items-center group"
               >
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); speakPhrase(item.phrase) }}
-                    className="text-gray-600 hover:text-purple-400 transition flex-shrink-0 text-xl"
+                    className="text-gray-600 hover:text-purple-400 transition flex-shrink-0"
                   >
                     🔊
                   </button>
                   <div className="min-w-0">
-                    <p className="font-bold text-white text-base">"{item.phrase}"</p>
-                    <p className="text-gray-500 text-sm truncate mt-0.5">{item.meaning}</p>
+                    <p className="font-bold text-white">"{item.phrase}"</p>
+                    <p className="text-gray-500 text-xs mt-0.5 truncate">{item.meaning}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full border hidden md:block ${getLevelColor(item.level)}`}>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border hidden md:block ${getLevelStyle(item.level)}`}>
                     {item.level}
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleSave(item) }}
-                    className={`transition text-xl ${isSaved(item) ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}`}
+                    className={`transition ${isSaved(item) ? 'text-yellow-400' : 'text-gray-700 hover:text-yellow-400'}`}
                   >
                     {isSaved(item) ? '⭐' : '☆'}
                   </button>
-                  <span className={`text-gray-500 text-xl transition-transform duration-300 ${expandedPhrase === i ? 'rotate-180' : ''}`}>▾</span>
+                  <div className={`w-6 h-6 rounded-full border border-gray-700 flex items-center justify-center text-gray-500 transition-all ${
+                    expandedPhrase === i ? 'bg-purple-600 border-purple-600 text-white rotate-180' : 'group-hover:border-gray-500'
+                  }`}>
+                    ▾
+                  </div>
                 </div>
               </button>
 
+              {/* Expanded Content */}
               {expandedPhrase === i && (
-                <div className="border-t border-gray-800 px-6 pb-5 pt-4 space-y-4">
+                <div className="border-t border-gray-800">
 
-                  <div className="bg-blue-900 bg-opacity-20 border border-blue-800 rounded-xl px-5 py-4">
-                    <p className="text-xs font-semibold text-blue-400 mb-2">💬 Example:</p>
-                    <p className="text-gray-200 italic">"{item.example}"</p>
-                    <button
-                      onClick={() => speakPhrase(item.example)}
-                      className="text-blue-400 hover:text-blue-300 text-xs mt-2 transition"
-                    >
-                      🔊 Hear example
-                    </button>
-                  </div>
-
-                  <div className="bg-yellow-900 bg-opacity-20 border border-yellow-800 rounded-xl px-5 py-4">
-                    <p className="text-xs font-semibold text-yellow-400 mb-2">💡 When to use it:</p>
-                    <p className="text-gray-300 text-sm">{item.tip}</p>
-                  </div>
-
-                  {/* AI Practice Section */}
-                  <div className="bg-purple-900 bg-opacity-20 border border-purple-700 rounded-xl p-4">
-                    <p className="text-sm font-bold text-purple-300 mb-3">🤖 Practice with AI</p>
-
-                    <div className="flex items-center gap-2 mb-3">
-                      <p className="text-xs text-gray-500">Your language:</p>
-                      <select
-                        value={nativeLanguage}
-                        onChange={e => setNativeLanguage(e.target.value)}
-                        className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs focus:outline-none focus:border-purple-500"
-                      >
-                        {['Hindi', 'Punjabi', 'Mandarin', 'Arabic', 'Spanish', 'French', 'Tagalog', 'Urdu', 'Portuguese', 'Korean'].map(lang => (
-                          <option key={lang}>{lang}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex gap-2 flex-wrap">
+                  {/* Content */}
+                  <div className="px-6 py-5 space-y-4">
+                    <div className="relative pl-4 border-l-2 border-purple-600">
+                      <p className="text-gray-400 text-sm italic">"{item.example}"</p>
                       <button
-                        onClick={() => { setAiMode(`explain-${i}`); callAI(item.phrase, item.meaning, 'explain') }}
-                        className="bg-blue-900 bg-opacity-50 border border-blue-700 text-blue-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                        onClick={() => speakPhrase(item.example)}
+                        className="text-gray-600 hover:text-purple-400 text-xs mt-1 transition"
                       >
-                        📖 Explain
-                      </button>
-                      <button
-                        onClick={() => { setAiMode(`translate-${i}`); callAI(item.phrase, item.meaning, 'translate') }}
-                        className="bg-green-900 bg-opacity-50 border border-green-700 text-green-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                      >
-                        🌍 Translate
-                      </button>
-                      <button
-                        onClick={() => { setAiMode(`practice-${i}`); callAI(item.phrase, item.meaning, 'practice') }}
-                        className="bg-orange-900 bg-opacity-50 border border-orange-700 text-orange-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                      >
-                        ✍️ Practice
+                        🔊 Hear example
                       </button>
                     </div>
 
-                    {aiLoading && aiMode && aiMode.endsWith(`-${i}`) && (
-                      <div className="flex gap-2 mt-3">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    <div className="flex items-start gap-2 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3">
+                      <span className="text-yellow-500 text-sm mt-0.5 flex-shrink-0">💡</span>
+                      <p className="text-gray-400 text-sm">{item.tip}</p>
+                    </div>
+                  </div>
+
+                  {/* AI Practice */}
+                  <div className="border-t border-gray-800 px-6 py-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                        <span className="w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center text-xs">🤖</span>
+                        Practice with AI
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 mb-4 flex-wrap">
+                      {[
+                        { action: 'explain', label: 'Explain', icon: '📖' },
+                        { action: 'translate', label: 'Translate', icon: '🌍' },
+                        { action: 'practice', label: 'Practice', icon: '✍️' },
+                      ].map(btn => (
+                        <button
+                          key={btn.action}
+                          onClick={() => {
+                            setAiMode(`${btn.action}-${i}`)
+                            callAI(item.phrase, item.meaning, btn.action)
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition border ${
+                            aiMode === `${btn.action}-${i}`
+                              ? 'border-purple-600 bg-purple-900 bg-opacity-30 text-purple-300'
+                              : 'border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white'
+                          }`}
+                        >
+                          <span>{btn.icon}</span>
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {aiLoading && aiMode?.endsWith(`-${i}`) && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-gray-500 text-xs">AI is thinking...</span>
                       </div>
                     )}
 
-                    {aiResponse && aiMode && aiMode.endsWith(`-${i}`) && !aiLoading && (
-                      <div className="mt-3 space-y-3">
-                        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                          <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-line">{aiResponse}</p>
+                    {aiResponse && aiMode?.endsWith(`-${i}`) && !aiLoading && (
+                      <div className="space-y-3">
+                        <div className="relative pl-4 border-l-2 border-purple-600 bg-gray-800 border border-gray-700 rounded-xl p-4">
+                          <p className="text-xs font-semibold text-purple-400 mb-2">🤖 AI Response</p>
+                          <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{aiResponse}</p>
                         </div>
 
-                        {aiMode.startsWith('practice') && (
+                        {aiMode?.startsWith('practice') && (
                           <div className="space-y-2">
                             <input
                               type="text"
                               value={userPractice}
                               onChange={e => setUserPractice(e.target.value)}
                               placeholder="Write your sentence using this phrase..."
-                              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition text-sm"
+                              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition text-sm"
                             />
                             <button
-                              onClick={() => { setAiMode(`check-${i}`); callAI(item.phrase, item.meaning, 'check', userPractice) }}
+                              onClick={() => {
+                                setAiMode(`check-${i}`)
+                                callAI(item.phrase, item.meaning, 'check', userPractice)
+                              }}
                               disabled={!userPractice.trim()}
-                              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition disabled:opacity-50"
+                              className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition disabled:opacity-40"
                             >
                               ✅ Check my answer
                             </button>
@@ -407,35 +473,35 @@ function Phrases() {
                         )}
                       </div>
                     )}
-                  </div>
 
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => toggleSave(item)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition border ${
-                        isSaved(item)
-                          ? 'bg-yellow-900 bg-opacity-30 border-yellow-700 text-yellow-300'
-                          : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-yellow-700 hover:text-yellow-300'
-                      }`}
-                    >
-                      {isSaved(item) ? '⭐ Saved' : '☆ Save Phrase'}
-                    </button>
-                    <button
-                      onClick={() => speakPhrase(item.phrase)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-gray-800 border border-gray-700 text-gray-400 hover:border-purple-700 hover:text-purple-300 transition"
-                    >
-                      🔊 Pronounce
-                    </button>
+                    <div className="flex gap-2 mt-4 pt-4 border-t border-gray-800">
+                      <button
+                        onClick={() => toggleSave(item)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition border ${
+                          isSaved(item)
+                            ? 'border-yellow-700 text-yellow-400'
+                            : 'border-gray-700 text-gray-500 hover:border-gray-500 hover:text-white'
+                        }`}
+                      >
+                        {isSaved(item) ? '⭐ Saved' : '☆ Save'}
+                      </button>
+                      <button
+                        onClick={() => speakPhrase(item.phrase)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-gray-700 text-gray-500 hover:border-gray-500 hover:text-white transition"
+                      >
+                        🔊 Pronounce
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
           ))}
 
-          {filteredPhrases.length === 0 && (
-            <div className="text-center py-16">
-              <p className="text-6xl mb-4">🔍</p>
-              <p className="text-gray-400 text-lg">No phrases found for "{searchTerm}"</p>
+          {filteredPhrases?.length === 0 && (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 text-center">
+              <p className="text-4xl mb-3">🔍</p>
+              <p className="text-gray-400">No phrases found for "{searchTerm}"</p>
               <button onClick={() => setSearchTerm('')} className="text-purple-400 hover:text-purple-300 text-sm mt-2 transition">
                 Clear search
               </button>

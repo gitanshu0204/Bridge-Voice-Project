@@ -18,6 +18,7 @@ import Phrases from './pages/Phrases'
 import GrammarChecker from './pages/GrammarChecker'
 import PronunciationScorer from './pages/PronunciationScorer'
 import DailyChallenge from './pages/DailyChallenge'
+import Pricing from './pages/Pricing'
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
         <Route path="/grammar" element={<GrammarChecker />} />
         <Route path="/pronunciation" element={<PronunciationScorer />} />
         <Route path="/daily" element={<DailyChallenge />} />
+        <Route path="/pricing" element={<Pricing />} />
 
       </Routes>
     </Router>

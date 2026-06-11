@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { checkLimit, trackUsage } from '../utils/usageTracker'
+import UpgradeModal from '../components/UpgradeModal'
 
 function Chat() {
   const navigate = useNavigate()
@@ -18,6 +20,7 @@ function Chat() {
   const [conversations, setConversations] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [expanded, setExpanded] = useState(null)
+  const [showUpgrade, setShowUpgrade] = useState(false)
   const messagesEndRef = useRef(null)
   const recognitionRef = useRef(null)
 
@@ -31,9 +34,7 @@ function Chat() {
   }, [messages])
 
   useEffect(() => {
-    if (activeTab === 'history') {
-      fetchConversations()
-    }
+    if (activeTab === 'history') fetchConversations()
   }, [activeTab])
 
   const scrollToBottom = () => {
@@ -68,7 +69,7 @@ function Chat() {
       })
       setMessages([{
         role: 'assistant',
-        content: "Hello! I'm your BridgeVoice AI conversation partner. I'm here to help you practice English. What scenario would you like to practice today?"
+        content: "Hello! I'm your BridgeVoice AI conversation partner. What scenario would you like to practice today?"
       }])
       setActiveTab('history')
       fetchConversations()
@@ -79,9 +80,7 @@ function Chat() {
 
   const deleteConversation = async (id) => {
     try {
-      await fetch(`http://127.0.0.1:8000/api/conversations/${id}`, {
-        method: 'DELETE'
-      })
+      await fetch(`http://127.0.0.1:8000/api/conversations/${id}`, { method: 'DELETE' })
       setConversations(prev => prev.filter(c => c.id !== id))
     } catch (err) {
       console.log('Could not delete')
@@ -90,6 +89,14 @@ function Chat() {
 
   const sendMessage = async (text) => {
     if (!text.trim()) return
+
+    const limit = checkLimit('chat')
+    if (!limit.allowed) {
+      setShowUpgrade(true)
+      return
+    }
+    trackUsage('chat')
+
     const userMessage = { role: 'user', content: text }
     setMessages(prev => [...prev, userMessage])
     setInput('')
@@ -99,7 +106,7 @@ function Chat() {
       const response = await fetch('http://127.0.0.1:8000/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, scenario: scenario })
+        body: JSON.stringify({ message: text, scenario })
       })
       const data = await response.json()
       const aiReply = data.reply || "I'm sorry, I couldn't understand that. Could you try again?"
@@ -165,33 +172,57 @@ function Chat() {
     return icons[scenario] || '💬'
   }
 
+  const chatLimit = checkLimit('chat')
+
+  const scenarios = [
+    { label: 'General Conversation', icon: '💬' },
+    { label: 'Job Interview', icon: '💼' },
+    { label: 'Grocery Store', icon: '🛒' },
+    { label: 'Doctor Visit', icon: '🏥' },
+    { label: 'Bank Visit', icon: '🏦' },
+    { label: 'Workplace Chat', icon: '🏢' },
+  ]
+
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto flex flex-col gap-4">
+      <div className="max-w-3xl mx-auto space-y-4">
 
-        <div>
-          <h2 className="text-2xl font-bold">🗣️ AI Conversation</h2>
-          <p className="text-gray-400 mt-1">Practice English with your AI conversation partner</p>
+        {/* Header */}
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="text-2xl font-bold text-white">AI Conversation</h2>
+            <p className="text-gray-400 text-sm mt-1">Practice English with your AI conversation partner</p>
+          </div>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium ${
+            chatLimit.remaining <= 2
+              ? 'bg-red-900 bg-opacity-20 border-red-800 text-red-400'
+              : chatLimit.remaining <= 5
+              ? 'bg-yellow-900 bg-opacity-20 border-yellow-800 text-yellow-400'
+              : 'bg-green-900 bg-opacity-20 border-green-800 text-green-400'
+          }`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+            {chatLimit.remaining}/{chatLimit.limit} left today
+          </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-1.5 flex gap-1">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`px-4 py-2 rounded-xl font-medium text-sm transition ${
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
               activeTab === 'chat'
-                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                : 'text-gray-400 hover:text-white'
             }`}
           >
-            💬 Current Chat
+            💬 Chat
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`px-4 py-2 rounded-xl font-medium text-sm transition ${
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
               activeTab === 'history'
-                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                : 'text-gray-400 hover:text-white'
             }`}
           >
             📜 History {conversations.length > 0 && `(${conversations.length})`}
@@ -201,38 +232,60 @@ function Chat() {
         {activeTab === 'chat' && (
           <>
             {/* Scenario Selector */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
-              <p className="text-sm text-gray-400 mb-3 font-medium">Select Scenario:</p>
-              <div className="flex gap-2 flex-wrap">
-                {['General Conversation', 'Job Interview', 'Grocery Store', 'Doctor Visit', 'Bank Visit', 'Workplace Chat'].map(s => (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-800">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Select Scenario</p>
+              </div>
+              <div className="p-3 flex gap-2 flex-wrap">
+                {scenarios.map(s => (
                   <button
-                    key={s}
-                    onClick={() => setScenario(s)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
-                      scenario === s
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                        : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                    key={s.label}
+                    onClick={() => setScenario(s.label)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                      scenario === s.label
+                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                        : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
                     }`}
                   >
-                    {s}
+                    <span>{s.icon}</span>
+                    <span>{s.label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Chat Window */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl flex flex-col" style={{ minHeight: '400px' }}>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '450px' }}>
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+
+              {/* Active scenario indicator */}
+              <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                  <span className="text-xs text-gray-400 font-medium">{scenario}</span>
+                </div>
+                <button
+                  onClick={saveConversation}
+                  disabled={messages.length <= 1}
+                  className="text-xs text-gray-500 hover:text-green-400 transition disabled:opacity-30 flex items-center gap-1"
+                >
+                  💾 Save
+                </button>
+              </div>
+
+              {/* Messages */}
+              <div className="overflow-y-auto p-4 space-y-4" style={{ maxHeight: '420px', minHeight: '300px' }}>
                 {messages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role === 'assistant' && (
+                      <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold text-white mr-2 flex-shrink-0 mt-1">
+                        AI
+                      </div>
+                    )}
                     <div className={`max-w-xs md:max-w-md px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-br-sm'
-                        : 'bg-gray-800 text-gray-200 rounded-bl-sm border border-gray-700'
+                        ? 'bg-purple-600 text-white rounded-br-sm'
+                        : 'bg-gray-800 border border-gray-700 text-gray-200 rounded-bl-sm'
                     }`}>
-                      {msg.role === 'assistant' && (
-                        <p className="text-xs font-semibold text-purple-400 mb-1">🤖 BridgeVoice AI</p>
-                      )}
                       {msg.content}
                     </div>
                   </div>
@@ -240,11 +293,14 @@ function Chat() {
 
                 {loading && (
                   <div className="flex justify-start">
+                    <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold text-white mr-2 flex-shrink-0">
+                      AI
+                    </div>
                     <div className="bg-gray-800 border border-gray-700 px-4 py-3 rounded-2xl rounded-bl-sm">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      <div className="flex gap-1.5 items-center">
+                        <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                       </div>
                     </div>
                   </div>
@@ -252,14 +308,15 @@ function Chat() {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Input */}
               <div className="border-t border-gray-800 p-4">
                 <div className="flex gap-2 items-center">
                   <button
                     onClick={listening ? stopListening : startListening}
-                    className={`p-3 rounded-full transition ${
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition flex-shrink-0 ${
                       listening
                         ? 'bg-red-600 text-white animate-pulse'
-                        : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                        : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500'
                     }`}
                   >
                     🎤
@@ -269,16 +326,16 @@ function Chat() {
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder={listening ? '🎤 Listening...' : 'Type your message or click 🎤 to speak...'}
+                    placeholder={listening ? 'Listening...' : 'Type a message or click 🎤 to speak...'}
                     disabled={listening || loading}
-                    className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition text-sm"
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition text-sm"
                   />
                   <button
                     onClick={() => sendMessage(input)}
                     disabled={!input.trim() || loading}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-4 py-2 rounded-xl transition disabled:opacity-50 font-medium text-sm"
+                    className="w-10 h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center transition disabled:opacity-40 flex-shrink-0 shadow-lg shadow-purple-900/40"
                   >
-                    Send
+                    →
                   </button>
                 </div>
                 {listening && (
@@ -289,25 +346,23 @@ function Chat() {
               </div>
             </div>
 
-            {/* Save & Quick Phrases */}
-            <div className="flex gap-3">
-              <button
-                onClick={saveConversation}
-                disabled={messages.length <= 1}
-                className="bg-green-900 bg-opacity-30 border border-green-700 hover:bg-opacity-50 text-green-400 px-4 py-2 rounded-xl transition text-sm font-medium disabled:opacity-50"
-              >
-                💾 Save Conversation
-              </button>
-            </div>
-
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
-              <p className="text-sm font-semibold text-gray-400 mb-2">💡 Quick Phrases:</p>
-              <div className="flex gap-2 flex-wrap">
-                {['Hello, nice to meet you!', 'Could you repeat that?', "I don't understand", 'Can you speak slower?'].map(phrase => (
+            {/* Quick Phrases */}
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-800">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick Phrases</p>
+              </div>
+              <div className="p-3 flex gap-2 flex-wrap">
+                {[
+                  'Hello, nice to meet you!',
+                  'Could you repeat that?',
+                  "I don't understand",
+                  'Can you speak slower?',
+                  'Thank you very much!',
+                ].map(phrase => (
                   <button
                     key={phrase}
                     onClick={() => sendMessage(phrase)}
-                    className="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-3 py-1 rounded-full text-xs transition border border-gray-700"
+                    className="px-3 py-1.5 rounded-xl text-xs text-gray-400 hover:text-white bg-gray-800 border border-gray-700 hover:border-gray-500 transition"
                   >
                     {phrase}
                   </button>
@@ -320,51 +375,46 @@ function Chat() {
         {activeTab === 'history' && (
           <div>
             {historyLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 bg-purple-500 rounded-full animate-bounce"></div>
-                  <div className="w-3 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                </div>
+              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 flex justify-center">
+                <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : conversations.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-5xl mb-4">💬</p>
-                <p className="font-bold text-gray-300 mb-2">No conversations saved yet!</p>
-                <p className="text-gray-500 text-sm mb-4">Start chatting and click "Save Conversation" to see your history here.</p>
+              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 text-center">
+                <p className="text-4xl mb-4">💬</p>
+                <p className="font-bold text-gray-300 mb-2">No conversations saved yet</p>
+                <p className="text-gray-500 text-sm mb-4">Start chatting and click Save to keep your history</p>
                 <button
                   onClick={() => setActiveTab('chat')}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-xl font-medium transition text-sm"
+                  className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition"
                 >
                   Start Chatting →
                 </button>
               </div>
             ) : (
-              <div className="space-y-4">
-                <p className="text-gray-500 text-sm">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''} saved</p>
+              <div className="space-y-3">
+                <p className="text-gray-500 text-xs">{conversations.length} saved conversation{conversations.length !== 1 ? 's' : ''}</p>
                 {conversations.map((conv) => (
-                  <div key={conv.id} className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-600 transition">
+                  <div key={conv.id} className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition">
                     <div className="flex justify-between items-center p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center text-xl">
+                        <div className="w-10 h-10 bg-purple-600 bg-opacity-20 border border-purple-800 rounded-xl flex items-center justify-center text-xl">
                           {getScenarioIcon(conv.scenario)}
                         </div>
                         <div>
-                          <p className="font-bold text-white text-sm">{conv.scenario}</p>
-                          <p className="text-xs text-gray-500">{conv.created_at}</p>
-                          <p className="text-xs text-purple-400">{conv.messages.length} messages</p>
+                          <p className="font-semibold text-white text-sm">{conv.scenario}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{conv.created_at} • {conv.messages.length} messages</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => setExpanded(expanded === conv.id ? null : conv.id)}
-                          className="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-3 py-1.5 rounded-xl transition text-xs"
+                          className="text-xs border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 px-3 py-1.5 rounded-xl transition"
                         >
                           {expanded === conv.id ? 'Hide' : 'View'}
                         </button>
                         <button
                           onClick={() => deleteConversation(conv.id)}
-                          className="bg-red-900 bg-opacity-30 hover:bg-opacity-50 text-red-400 px-3 py-1.5 rounded-xl transition text-xs"
+                          className="text-xs border border-gray-800 text-gray-600 hover:text-red-400 hover:border-red-800 px-3 py-1.5 rounded-xl transition"
                         >
                           🗑️
                         </button>
@@ -372,17 +422,14 @@ function Chat() {
                     </div>
 
                     {expanded === conv.id && (
-                      <div className="border-t border-gray-800 p-4 space-y-3 max-h-80 overflow-y-auto">
+                      <div className="border-t border-gray-800 p-4 space-y-3 max-h-72 overflow-y-auto">
                         {conv.messages.map((msg, j) => (
                           <div key={j} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-xs px-3 py-2 rounded-xl text-xs leading-relaxed ${
                               msg.role === 'user'
-                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                                : 'bg-gray-800 text-gray-300 border border-gray-700'
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-gray-800 border border-gray-700 text-gray-300'
                             }`}>
-                              {msg.role === 'assistant' && (
-                                <p className="text-purple-400 font-semibold mb-1 text-xs">🤖 AI</p>
-                              )}
                               {msg.content}
                             </div>
                           </div>
@@ -397,6 +444,11 @@ function Chat() {
         )}
 
       </div>
+
+      {showUpgrade && (
+        <UpgradeModal feature="chat" onClose={() => setShowUpgrade(false)} />
+      )}
+
     </Layout>
   )
 }
