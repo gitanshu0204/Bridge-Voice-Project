@@ -3,70 +3,155 @@ from pydantic import BaseModel
 from groq import Groq
 import os
 import json
+from datetime import datetime
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY", ""))
 router = APIRouter()
 
-class ChallengeRequest(BaseModel):
+class GenerateChallengeRequest(BaseModel):
+    native_language: str = "English"
+    proficiency_level: str = "Beginner"
+
+class SubmitChallengeRequest(BaseModel):
     challenge_type: str
-    challenge_title: str
-    content: str
+    challenge_text: str
+    user_response: str
+    native_language: str = "English"
 
-@router.post("/daily-challenge")
-async def daily_challenge(data: ChallengeRequest):
+@router.post("/daily-challenge/generate")
+async def generate_challenge(data: GenerateChallengeRequest):
     try:
-        if data.challenge_type == "speaking":
-            prompt = f"""You are a friendly English speaking coach.
+        today = datetime.now().strftime("%A, %B %d, %Y")
 
-The student completed a speaking challenge: "{data.challenge_title}"
-What they said: "{data.content}"
-Word count: {len(data.content.split())} words
+        prompt = f"""You are an English learning coach for newcomers to Canada.
 
-Analyse their speaking and respond in this exact JSON format:
+Today is {today}.
+Student's native language: {data.native_language}
+Student's level: {data.proficiency_level}
+
+Generate exactly 3 daily English challenges for today. Make them practical and useful for someone living in Canada.
+
+Challenge types to include:
+1. Speaking Challenge — a topic to speak about for 30-60 seconds
+2. Writing Challenge — a short writing task (1-3 sentences)
+3. Vocabulary Challenge — learn and use 3 new words in sentences
+
+Respond ONLY in this exact JSON format:
 {{
-  "score": 75,
-  "feedback": "2-3 sentences of encouraging feedback about their speaking",
-  "strengths": ["strength 1", "strength 2"],
-  "improvements": ["improvement 1", "improvement 2"],
-  "xp_earned": 50
+  "date": "{today}",
+  "challenges": [
+    {{
+      "type": "Speaking",
+      "icon": "🗣️",
+      "title": "Short title",
+      "instruction": "Clear instruction for the student",
+      "example": "An example response",
+      "tip": "A helpful tip",
+      "xp": 30
+    }},
+    {{
+      "type": "Writing",
+      "icon": "✍️",
+      "title": "Short title",
+      "instruction": "Clear instruction for the student",
+      "example": "An example response",
+      "tip": "A helpful tip",
+      "xp": 20
+    }},
+    {{
+      "type": "Vocabulary",
+      "icon": "📖",
+      "title": "Short title",
+      "instruction": "Clear instruction for the student",
+      "words": ["word1", "word2", "word3"],
+      "example": "An example using the words",
+      "tip": "A helpful tip",
+      "xp": 25
+    }}
+  ]
 }}
 
-Score based on: length (more words = higher score), vocabulary variety, coherence."""
+Make challenges:
+- Relevant to daily Canadian life (work, shopping, healthcare, social)
+- Appropriate for {data.proficiency_level} level
+- Different every day since today is {today}
+- Practical and immediately useful"""
 
-        elif data.challenge_type == "writing":
-            prompt = f"""You are a friendly English writing coach.
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000
+        )
 
-The student completed a writing challenge: "{data.challenge_title}"
-What they wrote: "{data.content}"
-Word count: {len(data.content.split())} words
+        response_text = completion.choices[0].message.content.strip()
+        if response_text.startswith('```'):
+            response_text = response_text.split('```')[1]
+            if response_text.startswith('json'):
+                response_text = response_text[4:]
 
-Analyse their writing and respond in this exact JSON format:
+        result = json.loads(response_text.strip())
+        return result
+
+    except Exception as e:
+        print(f"Daily challenge error: {e}")
+        return {
+            "date": datetime.now().strftime("%A, %B %d, %Y"),
+            "challenges": [
+                {
+                    "type": "Speaking",
+                    "icon": "🗣️",
+                    "title": "Introduce Yourself",
+                    "instruction": "Introduce yourself in English for 30 seconds. Include your name, where you are from, and what you do.",
+                    "example": "Hi, my name is Raj. I am from India and I moved to Canada 6 months ago. I am currently looking for a job in IT.",
+                    "tip": "Speak slowly and clearly. Make eye contact!",
+                    "xp": 30
+                },
+                {
+                    "type": "Writing",
+                    "icon": "✍️",
+                    "title": "Write a Thank You Email",
+                    "instruction": "Write 2-3 sentences thanking your manager for helping you at work.",
+                    "example": "Dear Sarah, Thank you so much for taking the time to help me today. I really appreciate your patience and guidance.",
+                    "tip": "Always start with Dear and end with Thank you or Best regards.",
+                    "xp": 20
+                },
+                {
+                    "type": "Vocabulary",
+                    "icon": "📖",
+                    "title": "Workplace Words",
+                    "instruction": "Learn these 3 words and use each one in a sentence.",
+                    "words": ["Collaborate", "Deadline", "Feedback"],
+                    "example": "I love to collaborate with my team to meet our deadline and get feedback from our manager.",
+                    "tip": "Try to use these words in real conversations today!",
+                    "xp": 25
+                }
+            ]
+        }
+
+@router.post("/daily-challenge/submit")
+async def submit_challenge(data: SubmitChallengeRequest):
+    try:
+        prompt = f"""You are a friendly English coach for newcomers to Canada.
+
+Challenge type: {data.challenge_type}
+Challenge: "{data.challenge_text}"
+Student's response: "{data.user_response}"
+Student's native language: {data.native_language}
+
+Evaluate the response and provide feedback. Be encouraging!
+
+Respond in this exact JSON format:
 {{
-  "score": 75,
-  "feedback": "2-3 sentences of encouraging feedback about their writing",
+  "score": 85,
+  "feedback": "Encouraging feedback in English (2-3 sentences)",
+  "feedback_native": "Same feedback in {data.native_language}",
   "strengths": ["strength 1", "strength 2"],
-  "improvements": ["improvement 1", "improvement 2"],
-  "xp_earned": 40
+  "improvements": ["improvement 1"],
+  "corrected": "Corrected version if needed, otherwise same as input",
+  "xp_earned": 25
 }}
 
-Score based on: grammar, vocabulary, sentence structure, length."""
-
-        else:
-            prompt = f"""You are a friendly English vocabulary coach.
-
-The student completed a vocabulary challenge: "{data.challenge_title}"
-What they wrote: "{data.content}"
-
-Analyse if they used the words correctly and respond in this exact JSON format:
-{{
-  "score": 75,
-  "feedback": "2-3 sentences of encouraging feedback about their vocabulary usage",
-  "strengths": ["strength 1", "strength 2"],
-  "improvements": ["improvement 1", "improvement 2"],
-  "xp_earned": 30
-}}
-
-Score based on: correct usage of vocabulary words, grammar, creativity."""
+Score 90-100 for excellent, 70-89 for good, 50-69 for average, below 50 for needs work."""
 
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -74,21 +159,23 @@ Score based on: correct usage of vocabulary words, grammar, creativity."""
             max_tokens=400
         )
 
-        response_text = completion.choices[0].message.content
-        clean = response_text.strip()
-        if clean.startswith('```'):
-            clean = clean.split('```')[1]
-            if clean.startswith('json'):
-                clean = clean[4:]
-        result = json.loads(clean.strip())
+        response_text = completion.choices[0].message.content.strip()
+        if response_text.startswith('```'):
+            response_text = response_text.split('```')[1]
+            if response_text.startswith('json'):
+                response_text = response_text[4:]
+
+        result = json.loads(response_text.strip())
         return result
 
     except Exception as e:
-        print(f"Daily challenge error: {e}")
+        print(f"Submit challenge error: {e}")
         return {
-            "score": 70,
-            "feedback": "Great effort on completing today's challenge! Keep practicing every day to improve your English skills.",
-            "strengths": ["You completed the challenge!", "You are building good habits"],
-            "improvements": ["Try to use more varied vocabulary", "Practice writing longer responses"],
+            "score": 75,
+            "feedback": "Good effort! Keep practicing every day to improve your English.",
+            "feedback_native": "",
+            "strengths": ["You completed the challenge!", "Good effort!"],
+            "improvements": ["Keep practicing daily"],
+            "corrected": data.user_response,
             "xp_earned": 20
         }

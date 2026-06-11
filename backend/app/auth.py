@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-
-SECRET_KEY = "bridgevoice-secret-key-2024"
+import os
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "bridgevoice-secret-key-2024")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
