@@ -10,19 +10,31 @@ router = APIRouter()
 class InterviewQuestionsRequest(BaseModel):
     job_title: str
     difficulty: str = "Medium"
+    company: str = ""
 
 class InterviewFeedbackRequest(BaseModel):
     job_title: str
     question: str
     answer: str
+    company: str = ""
 
 @router.post("/interview/questions")
 async def generate_questions(data: InterviewQuestionsRequest):
     try:
-        prompt = f"""You are an expert interview coach.
+        company_context = f"at {data.company}" if data.company else ""
+        company_specific = f"""
+The company is {data.company}.
+- Generate questions specific to {data.company}'s culture and values
+- Include questions about why the candidate wants to work at {data.company}
+- Reference real aspects of {data.company}'s business and work environment
+""" if data.company else ""
 
-Generate exactly 5 realistic interview questions for: {data.job_title}
-Difficulty level: {data.difficulty}
+        prompt = f"""You are an expert Canadian interview coach.
+
+Generate exactly 5 realistic interview questions for:
+- Position: {data.job_title} {company_context}
+- Difficulty: {data.difficulty}
+{company_specific}
 
 Respond ONLY with a valid JSON array:
 [
@@ -34,7 +46,8 @@ Respond ONLY with a valid JSON array:
 ]
 
 Make questions realistic and commonly asked in Canadian job interviews.
-Include a mix of: behavioral, situational and skill-based questions."""
+Include a mix of behavioral, situational and skill-based questions.
+Questions should feel natural and specific to the role{f' at {data.company}' if data.company else ''}."""
 
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -56,16 +69,18 @@ Include a mix of: behavioral, situational and skill-based questions."""
             {"question": "Tell me about yourself.", "tip": "Keep it professional and relevant", "type": "General"},
             {"question": "What are your greatest strengths?", "tip": "Give specific examples", "type": "Behavioral"},
             {"question": "Why do you want this job?", "tip": "Research the company first", "type": "Motivational"},
-            {"question": "Where do you see yourself in 5 years?", "tip": "Show ambition but be realistic", "type": "Future"},
+            {"question": "Describe a challenge you overcame.", "tip": "Use the STAR method", "type": "Behavioral"},
             {"question": "Do you have any questions for us?", "tip": "Always prepare 2-3 questions", "type": "Closing"},
         ]}
 
 @router.post("/interview/feedback")
 async def interview_feedback(data: InterviewFeedbackRequest):
     try:
+        company_context = f"at {data.company}" if data.company else ""
+
         prompt = f"""You are an expert Canadian interview coach.
 
-Job: {data.job_title}
+Job: {data.job_title} {company_context}
 Interview Question: "{data.question}"
 Candidate's Answer: "{data.answer}"
 
@@ -74,7 +89,7 @@ Evaluate this interview answer and provide:
 2. What they did well (2 points)
 3. What to improve (2 points)
 4. A better sample answer (2-3 sentences)
-5. One key tip for Canadian interviews
+5. One key tip specific to Canadian workplace culture{f' and {data.company}' if data.company else ''}
 
 Respond in this exact JSON format:
 {{
