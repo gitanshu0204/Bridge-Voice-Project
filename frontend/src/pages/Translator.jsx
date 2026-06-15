@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { addXP } from '../utils/xpTracker'
+import { logActivity } from '../utils/activityTracker'
 
 function Translator() {
   const navigate = useNavigate()
@@ -124,10 +126,15 @@ function Translator() {
         })
       })
       const data = await response.json()
-      setQuizQuestions(data.questions)
-      setQuizStage('quiz')
+      if (data.questions && data.questions.length > 0) {
+        setQuizQuestions(data.questions)
+        setQuizStage('quiz')
+      } else {
+        throw new Error('No questions returned')
+      }
     } catch (err) {
-      console.log('Quiz generation error')
+      console.log('Quiz generation error', err)
+      alert('Could not generate quiz. Please try again!')
     }
     setQuizGenerating(false)
   }
@@ -141,9 +148,9 @@ function Translator() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          original: currentQuestion.english,
+          native_text: currentQuestion.native,
           user_answer: userAnswer,
-          correct_answer: currentQuestion.translated,
+          correct_answer: currentQuestion.english,
           native_language: quizLang
         })
       })
@@ -151,15 +158,22 @@ function Translator() {
       setQuizResult(data)
       setScores(prev => [...prev, data.score])
       setShowAnswer(true)
+
+      logActivity({ type: 'translation', score: data.score, detail: currentQuestion.english })
+
+      if (data.score >= 70) {
+        addXP(5, `Translation Quiz: ${currentQuestion.english}`)
+      }
     } catch (err) {
       setQuizResult({
-        score: 70,
-        correct: true,
-        feedback: 'Good attempt!',
-        correction: currentQuestion.translated,
+        score: 60,
+        correct: false,
+        feedback: 'Could not check your answer. Please try again.',
+        feedback_native: '',
+        correction: currentQuestion.english,
         tip: 'Keep practicing!'
       })
-      setScores(prev => [...prev, 70])
+      setScores(prev => [...prev, 60])
       setShowAnswer(true)
     }
     setCheckingAnswer(false)
@@ -421,7 +435,7 @@ function Translator() {
                 <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
                   <div className="px-6 py-5 border-b border-gray-800">
                     <h3 className="font-bold text-white text-lg">Translation Quiz</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">AI generates unique questions every time — never the same quiz twice!</p>
+                    <p className="text-gray-500 text-sm mt-0.5">AI shows you a sentence in your language — you translate it to English!</p>
                   </div>
                   <div className="p-6">
                     <div className="grid grid-cols-3 gap-4 mb-6">
@@ -492,10 +506,10 @@ function Translator() {
                       {quizGenerating ? (
                         <>
                           <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                          <span>Generating {quizLang} Quiz...</span>
+                          <span>Generating Quiz...</span>
                         </>
                       ) : (
-                        `🤖 Generate ${quizLang} Quiz`
+                        `🤖 Generate ${quizLang} → English Quiz`
                       )}
                     </button>
                   </div>
@@ -510,11 +524,9 @@ function Translator() {
                 <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-400">Question {currentQ + 1} of {quizQuestions.length}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs bg-purple-900 bg-opacity-50 border border-purple-800 text-purple-300 px-2 py-0.5 rounded-full">
-                        🤖 AI Generated • {quizLang}
-                      </span>
-                    </div>
+                    <span className="text-xs bg-purple-900 bg-opacity-50 border border-purple-800 text-purple-300 px-2 py-0.5 rounded-full">
+                      🤖 {quizLang} → English
+                    </span>
                   </div>
                   <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
                     <div
@@ -528,25 +540,27 @@ function Translator() {
                 <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center">
                     <span className="text-xs text-gray-500 bg-gray-800 px-3 py-1 rounded-full border border-gray-700">
-                      {quizQuestions[currentQ]?.type}
+                      {quizLang} → English
                     </span>
-                    <span className="text-xs text-gray-600">{quizQuestions[currentQ]?.hint}</span>
+                    {quizQuestions[currentQ]?.hint && (
+                      <span className="text-xs text-gray-600">💡 {quizQuestions[currentQ]?.hint}</span>
+                    )}
                   </div>
                   <div className="p-6">
                     <div className="relative pl-4 border-l-2 border-purple-600 mb-5">
-                      <p className="text-xs text-gray-500 mb-1">Translate this to {quizLang}:</p>
-                      <p className="text-white text-xl font-medium">{quizQuestions[currentQ]?.english}</p>
+                      <p className="text-xs text-gray-500 mb-1">Translate this to English:</p>
+                      <p className="text-white text-xl font-medium">{quizQuestions[currentQ]?.native}</p>
                     </div>
 
                     <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Your Translation in {quizLang}:
+                      Your Translation in English:
                     </label>
                     <input
                       type="text"
                       value={userAnswer}
                       onChange={e => setUserAnswer(e.target.value)}
                       onKeyPress={e => e.key === 'Enter' && !showAnswer && userAnswer.trim() && checkAnswer()}
-                      placeholder={`Type translation in ${quizLang}...`}
+                      placeholder="Type translation in English..."
                       disabled={showAnswer}
                       className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition text-sm disabled:opacity-60"
                     />
@@ -579,14 +593,25 @@ function Translator() {
                       }`}>{quizResult.score}%</span>
                     </div>
                     <div className="p-6 space-y-4">
-                      <div className="relative pl-4 border-l-2 border-purple-600">
-                        <p className="text-gray-300 text-sm">{quizResult.feedback}</p>
-                      </div>
 
                       <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
                         <p className="text-xs font-bold text-green-400 mb-1">✅ Correct Answer:</p>
-                        <p className="text-white font-medium">{quizResult.correction || quizQuestions[currentQ]?.translated}</p>
+                        <p className="text-white font-medium">{quizResult.correction || quizQuestions[currentQ]?.english}</p>
                       </div>
+
+                      {/* English Feedback */}
+                      <div className="relative pl-4 border-l-2 border-purple-600">
+                        <p className="text-xs font-bold text-purple-400 mb-1">Feedback (English):</p>
+                        <p className="text-gray-300 text-sm">{quizResult.feedback}</p>
+                      </div>
+
+                      {/* Native Language Feedback */}
+                      {quizResult.feedback_native && (
+                        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+                          <p className="text-xs font-bold text-purple-400 mb-1">🌍 Feedback ({quizLang}):</p>
+                          <p className="text-gray-300 text-sm leading-relaxed">{quizResult.feedback_native}</p>
+                        </div>
+                      )}
 
                       {quizResult.tip && (
                         <div className="flex items-start gap-2 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3">
@@ -622,7 +647,7 @@ function Translator() {
                         avgScore >= 60 ? 'text-yellow-400' : 'text-red-400'
                       }`}>{avgScore}%</div>
                       <p className="text-gray-400 text-sm">
-                        {quizLang} • {quizDifficulty} • AI Generated
+                        {quizLang} → English • {quizDifficulty}
                       </p>
                       <p className="text-gray-300 mt-2">
                         {avgScore >= 80 ? 'Excellent translation skills!' :
@@ -641,7 +666,7 @@ function Translator() {
                   <div className="divide-y divide-gray-800">
                     {quizQuestions.map((q, i) => (
                       <div key={i} className="px-6 py-3 flex justify-between items-center">
-                        <p className="text-gray-300 text-sm flex-1 pr-4 truncate">Q{i+1}: {q.english}</p>
+                        <p className="text-gray-300 text-sm flex-1 pr-4 truncate">Q{i+1}: {q.native}</p>
                         <span className={`text-sm font-bold flex-shrink-0 ${
                           (scores[i] || 0) >= 80 ? 'text-green-400' :
                           (scores[i] || 0) >= 60 ? 'text-yellow-400' : 'text-red-400'

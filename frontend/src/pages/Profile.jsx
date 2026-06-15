@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { fetchActivityLog, getRecentActivity, getTotalSessions, getOverallAvgScore } from '../utils/activityTracker'
+import { getProgress } from '../utils/xpTracker'
 
 function Profile() {
   const navigate = useNavigate()
@@ -12,35 +14,30 @@ function Profile() {
   const [saved, setSaved] = useState(false)
   const fileInputRef = useRef(null)
 
-  const totalXP = parseInt(localStorage.getItem('totalXP') || '340')
-  const streak = parseInt(localStorage.getItem('streak') || '7')
+  const [totalXP, setTotalXP] = useState(0)
+  const [streak, setStreak] = useState(0)
+  const [totalSessions, setTotalSessions] = useState(0)
+  const [overallAvgScore, setOverallAvgScore] = useState(0)
+  const [recentActivity, setRecentActivity] = useState([])
 
   const stats = [
-    { label: 'Sessions', value: '15', icon: '🎯' },
+    { label: 'Sessions', value: totalSessions, icon: '🎯' },
     { label: 'Day Streak', value: `🔥 ${streak}`, icon: '⚡' },
     { label: 'Total XP', value: totalXP, icon: '⭐' },
-    { label: 'Avg Score', value: '83%', icon: '📊' },
+    { label: 'Avg Score', value: totalSessions > 0 ? `${overallAvgScore}%` : '—', icon: '📊' },
     { label: 'Words', value: '124', icon: '📖' },
     { label: 'Badges', value: '4', icon: '🏆' },
   ]
 
   const badges = [
     { badge: '🌟', name: 'First Session', desc: 'Completed first conversation', earned: true, date: 'May 28' },
-    { badge: '🔥', name: '7 Day Streak', desc: 'Practiced 7 days in a row', earned: true, date: 'June 3' },
+    { badge: '🔥', name: '7 Day Streak', desc: 'Practiced 7 days in a row', earned: streak >= 7, date: streak >= 7 ? 'Earned' : '' },
     { badge: '💬', name: '10 Chats', desc: 'Completed 10 conversations', earned: true, date: 'June 4' },
     { badge: '🍁', name: 'Canada Ready', desc: 'Completed culture module', earned: true, date: 'June 5' },
-    { badge: '🏆', name: '30 Day Streak', desc: 'Practice 30 days in a row', earned: false, date: '' },
+    { badge: '🏆', name: '30 Day Streak', desc: 'Practice 30 days in a row', earned: streak >= 30, date: streak >= 30 ? 'Earned' : '' },
     { badge: '🧠', name: 'Quiz Master', desc: 'Pass all 5 quiz levels', earned: false, date: '' },
     { badge: '💼', name: 'Interview Pro', desc: 'Complete 10 interviews', earned: false, date: '' },
     { badge: '🎤', name: 'Pronunciation Pro', desc: 'Score 90%+ on pronunciation', earned: false, date: '' },
-  ]
-
-  const recentActivity = [
-    { icon: '🗣️', action: 'AI Chat', scenario: 'Job Interview Practice', score: '85%', time: 'Today' },
-    { icon: '🎯', action: 'Daily Challenge', scenario: 'Speaking Challenge', score: '78%', time: 'Today' },
-    { icon: '🎤', action: 'Pronunciation', scenario: 'Intermediate Level', score: '82%', time: 'Yesterday' },
-    { icon: '🧠', action: 'Vocabulary Quiz', scenario: 'Level 3 — Intermediate', score: '90%', time: 'Yesterday' },
-    { icon: '✍️', action: 'Grammar Check', scenario: 'Workplace Email', score: '95%', time: '2 days ago' },
   ]
 
   const weeklyProgress = [
@@ -67,6 +64,17 @@ function Profile() {
         setEditData(data)
       })
       .catch(err => console.log(err))
+
+    getProgress().then(p => {
+      setTotalXP(p.total_xp || 0)
+      setStreak(p.streak || 0)
+    })
+
+    fetchActivityLog().then(log => {
+      setTotalSessions(getTotalSessions(log))
+      setOverallAvgScore(getOverallAvgScore(log))
+      setRecentActivity(getRecentActivity(log, 5))
+    })
   }, [])
 
   const handleImageUpload = (e) => {
@@ -220,7 +228,7 @@ function Profile() {
                       🍁 Ontario, Canada
                     </span>
                     <span className="bg-gray-800 border border-gray-700 text-gray-400 px-3 py-1 rounded-full text-xs font-medium">
-                      🌍 {user.language_background || 'Hindi'}
+                      🌍 {user.language_background || 'Not set'}
                     </span>
                   </div>
                   <div className="flex gap-2 justify-center md:justify-start">
@@ -341,37 +349,43 @@ function Profile() {
               </div>
             </div>
 
-            {/* Weekly Progress */}
+            {/* Recent Activity Preview */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-800">
-                <p className="font-bold text-white text-sm">📈 This Week</p>
+              <div className="px-5 py-4 border-b border-gray-800 flex justify-between items-center">
+                <p className="font-bold text-white text-sm">📅 Recent Activity</p>
+                {recentActivity.length > 0 && (
+                  <button
+                    onClick={() => setActiveTab('activity')}
+                    className="text-purple-400 hover:text-purple-300 text-xs transition"
+                  >
+                    View all →
+                  </button>
+                )}
               </div>
-              <div className="p-5 space-y-4">
-                {[
-                  { label: 'Sessions Completed', value: 5, max: 7 },
-                  { label: 'Daily Challenges', value: 3, max: 7 },
-                  { label: 'Quiz Questions', value: 20, max: 30 },
-                  { label: 'Pronunciation Score', value: 82, max: 100 },
-                ].map((item, i) => (
-                  <div key={i}>
-                    <div className="flex justify-between mb-1.5">
-                      <p className="text-gray-400 text-xs">{item.label}</p>
-                      <p className="text-gray-300 text-xs font-medium">{item.value}/{item.max}</p>
+              {recentActivity.length === 0 ? (
+                <div className="px-5 py-10 text-center">
+                  <p className="text-3xl mb-2 opacity-30">📋</p>
+                  <p className="text-gray-600 text-xs">No activity yet — complete a quiz, grammar check, pronunciation or interview to see it here!</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-800">
+                  {recentActivity.slice(0, 4).map((item, i) => (
+                    <div key={i} className="flex items-center gap-3 px-5 py-3">
+                      <div className="w-9 h-9 bg-purple-600 bg-opacity-20 border border-purple-800 rounded-xl flex items-center justify-center text-lg flex-shrink-0">
+                        {item.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-200 text-sm">{item.action}</p>
+                        <p className="text-gray-500 text-xs mt-0.5 truncate">{item.scenario} • {item.time}</p>
+                      </div>
+                      <span className={`font-bold text-sm flex-shrink-0 ${
+                        parseInt(item.score) >= 85 ? 'text-green-400' :
+                        parseInt(item.score) >= 70 ? 'text-yellow-400' : 'text-red-400'
+                      }`}>{item.score}</span>
                     </div>
-                    <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="bg-purple-600 h-1.5 rounded-full transition-all"
-                        style={{ width: `${(item.value / item.max) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mx-5 mb-5 bg-purple-900 bg-opacity-20 border border-purple-800 rounded-xl px-4 py-3 text-center">
-                <p className="text-purple-300 text-xs font-semibold">🎯 Daily Goal</p>
-                <p className="text-white text-xl font-bold mt-0.5">1/3 sessions</p>
-                <p className="text-gray-500 text-xs mt-0.5">Complete 2 more today!</p>
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -405,23 +419,31 @@ function Profile() {
             <div className="px-6 py-4 border-b border-gray-800">
               <p className="font-bold text-white">Recent Activity</p>
             </div>
-            <div className="divide-y divide-gray-800">
-              {recentActivity.map((item, i) => (
-                <div key={i} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-800 transition">
-                  <div className="w-10 h-10 bg-purple-600 bg-opacity-20 border border-purple-800 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                    {item.icon}
+            {recentActivity.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <p className="text-4xl mb-3 opacity-30">📅</p>
+                <p className="text-gray-400 font-medium mb-1">No activity yet</p>
+                <p className="text-gray-600 text-sm">Complete activities to see your history here</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-800">
+                {recentActivity.map((item, i) => (
+                  <div key={i} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-800 transition">
+                    <div className="w-10 h-10 bg-purple-600 bg-opacity-20 border border-purple-800 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                      {item.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-200 text-sm">{item.action}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{item.scenario} • {item.time}</p>
+                    </div>
+                    <span className={`font-bold text-sm flex-shrink-0 ${
+                      parseInt(item.score) >= 85 ? 'text-green-400' :
+                      parseInt(item.score) >= 70 ? 'text-yellow-400' : 'text-red-400'
+                    }`}>{item.score}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-200 text-sm">{item.action}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{item.scenario} • {item.time}</p>
-                  </div>
-                  <span className={`font-bold text-sm flex-shrink-0 ${
-                    parseInt(item.score) >= 85 ? 'text-green-400' :
-                    parseInt(item.score) >= 70 ? 'text-yellow-400' : 'text-red-400'
-                  }`}>{item.score}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

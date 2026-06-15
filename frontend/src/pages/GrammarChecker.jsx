@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { addXP } from '../utils/xpTracker'
+import { logActivity } from '../utils/activityTracker'
 
 function GrammarChecker() {
   const navigate = useNavigate()
@@ -32,6 +34,12 @@ function GrammarChecker() {
       })
       const data = await response.json()
       setResult(data)
+
+      logActivity({ type: 'grammar', score: data.score, detail: 'Grammar check' })
+      
+      if (data.score >= 90) {
+        addXP(5, 'Grammar Check 90%+')
+      }
     } catch (err) {
       setResult({
         corrected: inputText,

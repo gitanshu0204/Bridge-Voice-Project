@@ -4,6 +4,7 @@ from app.database import get_db
 from app.models import User
 from app.schemas import UserRegister, UserLogin, UserResponse, Token
 from app.auth import hash_password, verify_password, create_access_token
+from app.schemas import UserUpdate
 
 router = APIRouter()
 
@@ -48,4 +49,21 @@ def get_profile(email: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@router.patch("/profile", response_model=UserResponse)
+def update_profile(email: str, data: UserUpdate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if data.language_background is not None:
+        user.language_background = data.language_background
+    if data.proficiency_level is not None:
+        user.proficiency_level = data.proficiency_level
+    if data.goals is not None:
+        user.goals = data.goals
+
+    db.commit()
+    db.refresh(user)
     return user

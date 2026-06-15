@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { addXP } from '../utils/xpTracker'
+import { logActivity } from '../utils/activityTracker'
 
 function Quiz() {
   const navigate = useNavigate()
@@ -207,6 +209,13 @@ function Quiz() {
       const updated = { ...completedLevels, [activeLevel]: { score: finalScore, passed } }
       setCompletedLevels(updated)
       localStorage.setItem('quizLevels', JSON.stringify(updated))
+
+      logActivity({ type: 'quiz', score: finalScore * 10, detail: `Level ${activeLevel} — ${currentLevelData?.title}` })
+      
+      if (passed && !completedLevels[activeLevel]?.passed) {
+        addXP(50, `Passed Quiz Level ${activeLevel}`)
+      }
+      
       setStage('result')
     }
   }

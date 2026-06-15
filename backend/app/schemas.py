@@ -1,6 +1,11 @@
 from pydantic import BaseModel
 from typing import Optional
 
+class UserUpdate(BaseModel):
+    language_background: Optional[str] = None
+    proficiency_level: Optional[str] = None
+    goals: Optional[str] = None
+
 class UserRegister(BaseModel):
     full_name: str
     email: str
@@ -27,3 +32,31 @@ class UserResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class ActivityLogCreate(BaseModel):
+    user_email: str
+    type: str
+    score: int
+    detail: str = ""
+
+class ActivityLogResponse(BaseModel):
+    type: str
+    score: int
+    detail: str
+    date: str
+
+    class Config:
+        from_attributes = True
+
+class ProgressResponse(BaseModel):
+    total_xp: int
+    streak: int
+    last_active_date: str | None = None
+
+    class Config:
+        from_attributes = True
+
+class AddXPRequest(BaseModel):
+    user_email: str
+    amount: int
+    reason: str = ""

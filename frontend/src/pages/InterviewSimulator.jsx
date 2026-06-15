@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { addXP } from '../utils/xpTracker'
+import { logActivity } from '../utils/activityTracker'
 
 function InterviewSimulator() {
   const navigate = useNavigate()
@@ -139,6 +141,9 @@ function InterviewSimulator() {
         newAnswers.reduce((t, a) => t + (a.feedback?.score || 70), 0) / newAnswers.length
       )
       setFinalResult({ answers: newAnswers, avgScore })
+
+      logActivity({ type: 'interview', score: avgScore, detail: `${selectedJob}${useCompany && companyInput ? ` at ${companyInput}` : ''}` })
+      addXP(30, `Completed Interview: ${selectedJob}`)
       setStage('result')
     }
   }

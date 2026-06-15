@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { addXP } from '../utils/xpTracker'
+import { logActivity } from '../utils/activityTracker'
 
 function PronunciationScorer() {
   const navigate = useNavigate()
@@ -137,6 +139,12 @@ function PronunciationScorer() {
       })
       const data = await response.json()
       setResult({ score, spokenText, wordResults, ...data })
+
+      logActivity({ type: 'pronunciation', score, detail: `"${currentItem.text}"` })
+
+      if (score >= 80) {
+        addXP(5, `Pronunciation: "${currentItem.text}"`)
+      }
     } catch (err) {
       setResult({
         score,

@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { fetchActivityLog, getRecentActivity, getTotalSessions, getOverallAvgScore } from '../utils/activityTracker'
+import { getProgress } from '../utils/xpTracker'
 
 function Dashboard() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [greeting, setGreeting] = useState('')
-  const totalXP = parseInt(localStorage.getItem('totalXP') || '340')
-  const streak = parseInt(localStorage.getItem('streak') || '7')
+  const [totalXP, setTotalXP] = useState(0)
+  const [streak, setStreak] = useState(0)
+  const [totalSessions, setTotalSessions] = useState(0)
+  const [avgScore, setAvgScore] = useState(0)
+  const [recentSessions, setRecentSessions] = useState([])
 
   const tips = [
     'Practice speaking out loud every day, even if just for 5 minutes. Consistency beats duration!',
@@ -33,6 +38,17 @@ function Dashboard() {
       .then(res => res.json())
       .then(data => setUser(data))
       .catch(() => setUser({ full_name: 'User' }))
+
+    getProgress().then(p => {
+      setTotalXP(p.total_xp || 0)
+      setStreak(p.streak || 0)
+    })
+
+    fetchActivityLog().then(log => {
+      setTotalSessions(getTotalSessions(log))
+      setAvgScore(getOverallAvgScore(log))
+      setRecentSessions(getRecentActivity(log, 3))
+    })
   }, [])
 
   const firstName = user?.full_name?.split(' ')[0] || 'User'
@@ -55,12 +71,6 @@ function Dashboard() {
     { icon: '🏦', title: 'Bank Visit', desc: 'Banking conversations', students: '980', path: '/chat' },
     { icon: '🏢', title: 'Workplace Chat', desc: 'Professional office talk', students: '1.5k', path: '/chat' },
     { icon: '🤝', title: 'Making Friends', desc: 'Casual social conversations', students: '2.1k', path: '/chat' },
-  ]
-
-  const recentSessions = [
-    { scenario: 'Job Interview', time: 'Today', score: 85, icon: '💼' },
-    { scenario: 'Grocery Store', time: 'Yesterday', score: 92, icon: '🛒' },
-    { scenario: 'Doctor Visit', time: '2 days ago', score: 78, icon: '🏥' },
   ]
 
   const getLevel = (xp) => {
@@ -121,10 +131,10 @@ function Dashboard() {
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { icon: '🔥', value: streak, label: 'Day Streak', sub: 'Keep going!' },
+            { icon: '🔥', value: streak, label: 'Day Streak', sub: streak > 0 ? 'Keep going!' : 'Start today' },
             { icon: '⭐', value: totalXP, label: 'Total XP', sub: `Level ${userLevel.level}` },
-            { icon: '🎯', value: '15', label: 'Sessions', sub: 'This month' },
-            { icon: '📊', value: '83%', label: 'Avg Score', sub: 'All time' },
+            { icon: '🎯', value: totalSessions, label: 'Sessions', sub: 'All time' },
+            { icon: '📊', value: totalSessions > 0 ? `${avgScore}%` : '—', label: 'Avg Score', sub: totalSessions > 0 ? 'All time' : 'No data yet' },
           ].map((stat, i) => (
             <div key={i} className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition">
               <p className="text-2xl mb-2">{stat.icon}</p>
@@ -133,25 +143,6 @@ function Dashboard() {
               <p className="text-gray-600 text-xs mt-0.5">{stat.sub}</p>
             </div>
           ))}
-        </div>
-
-        {/* Daily Goal */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 flex justify-between items-center">
-            <div>
-              <p className="font-bold text-white">Daily Goal</p>
-              <p className="text-gray-500 text-sm mt-0.5">Complete 3 sessions today to earn bonus XP</p>
-            </div>
-            <span className="text-xs bg-purple-900 bg-opacity-50 border border-purple-800 text-purple-300 px-3 py-1.5 rounded-full font-medium">
-              1/3 done
-            </span>
-          </div>
-          <div className="px-6 pb-5">
-            <div className="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
-              <div className="bg-purple-600 h-2.5 rounded-full transition-all" style={{ width: '33%' }}></div>
-            </div>
-            <p className="text-gray-600 text-xs mt-2">Complete 2 more sessions to earn 50 bonus XP!</p>
-          </div>
         </div>
 
         {/* Quick Actions */}
@@ -219,21 +210,28 @@ function Dashboard() {
               <div className="px-5 py-4 border-b border-gray-800">
                 <p className="font-bold text-white text-sm">Recent Sessions</p>
               </div>
-              <div className="divide-y divide-gray-800">
-                {recentSessions.map((s, i) => (
-                  <div key={i} className="flex items-center gap-3 px-5 py-3">
-                    <span className="text-lg">{s.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-gray-300 text-xs font-medium truncate">{s.scenario}</p>
-                      <p className="text-gray-600 text-xs">{s.time}</p>
+              {recentSessions.length === 0 ? (
+                <div className="px-5 py-8 text-center">
+                  <p className="text-2xl mb-2 opacity-30">📋</p>
+                  <p className="text-gray-600 text-xs">No sessions yet — complete an activity to see it here!</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-800">
+                  {recentSessions.map((s, i) => (
+                    <div key={i} className="flex items-center gap-3 px-5 py-3">
+                      <span className="text-lg">{s.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-300 text-xs font-medium truncate">{s.action}</p>
+                        <p className="text-gray-600 text-xs truncate">{s.scenario} • {s.time}</p>
+                      </div>
+                      <span className={`text-xs font-bold flex-shrink-0 ${
+                        parseInt(s.score) >= 85 ? 'text-green-400' :
+                        parseInt(s.score) >= 70 ? 'text-yellow-400' : 'text-red-400'
+                      }`}>{s.score}</span>
                     </div>
-                    <span className={`text-xs font-bold flex-shrink-0 ${
-                      s.score >= 85 ? 'text-green-400' :
-                      s.score >= 70 ? 'text-yellow-400' : 'text-red-400'
-                    }`}>{s.score}%</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
               <div className="px-5 py-3 border-t border-gray-800">
                 <button
                   onClick={() => navigate('/progress')}

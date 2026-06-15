@@ -16,9 +16,28 @@ function Onboarding() {
     setFormData({ ...formData, [field]: value })
   }
 
-  const handleFinish = () => {
-    navigate('/dashboard')
+  const handleFinish = async () => {
+  const email = localStorage.getItem('email')
+
+  try {
+    await fetch(`http://127.0.0.1:8000/api/users/profile?email=${email}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        language_background: formData.language_background.join(', '),
+        proficiency_level: formData.proficiency_level,
+        goals: formData.goals
+      })
+    })
+  } catch (err) {
+    console.log('Could not save onboarding data', err)
   }
+
+  // Save daily goal locally since there's no DB column for it
+  localStorage.setItem('dailyGoalTime', formData.daily_goal)
+
+  navigate('/dashboard')
+}
 
   const steps = [
     { number: 1, title: 'Native Language' },

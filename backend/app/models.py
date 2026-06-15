@@ -22,3 +22,23 @@ class Conversation(Base):
     scenario = Column(String, nullable=False)
     messages = Column(Text, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
+
+class UserProgress(Base):
+    __tablename__ = "user_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_email = Column(String, unique=True, index=True, nullable=False)
+    total_xp = Column(Integer, default=0)
+    streak = Column(Integer, default=0)
+    last_active_date = Column(String, nullable=True)  # YYYY-MM-DD
+
+class ActivityLog(Base):
+    __tablename__ = "activity_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_email = Column(String, index=True, nullable=False)
+    type = Column(String, nullable=False)  # grammar, pronunciation, quiz, interview, translation, daily_challenge
+    score = Column(Integer, nullable=False)
+    detail = Column(String, nullable=True)
+    date = Column(String, nullable=False)  # YYYY-MM-DD
+    created_at = Column(DateTime, server_default=func.now())
