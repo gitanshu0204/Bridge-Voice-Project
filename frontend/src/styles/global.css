@@ -400,4 +400,15 @@ nav {
   -ms-overflow-style: none;
 }
 
+/* === HIDE HORIZONTAL SCROLLBAR ON CATEGORY TABS === */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 0px;
+  display: none;
+}
+
+.overflow-x-auto {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 @import "tailwindcss";

@@ -162,27 +162,58 @@ function CultureGuide() {
           </div>
         </div>
 
-        {/* Category Tabs */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-2 flex gap-1 overflow-x-auto">
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setActiveCategory(cat.id)
-                setExpandedItem(null)
-                setAiMode(null)
-                setAiResponse('')
-              }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition whitespace-nowrap flex-shrink-0 ${
-                activeCategory === cat.id
-                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
-              }`}
-            >
-              <span>{cat.icon}</span>
-              <span>{cat.title}</span>
-            </button>
-          ))}
+        {/* Category Tabs with Arrow Navigation */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-2 flex items-center gap-1">
+
+          {/* Left Arrow */}
+          <button
+            onClick={() => {
+              const container = document.getElementById('category-tabs')
+              container.scrollBy({ left: -200, behavior: 'smooth' })
+            }}
+            className="flex-shrink-0 w-8 h-8 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition"
+          >
+            ←
+          </button>
+
+          {/* Tabs */}
+          <div
+            id="category-tabs"
+            className="flex gap-1 overflow-x-auto flex-1"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            <style>{`#category-tabs::-webkit-scrollbar { display: none; }`}</style>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setActiveCategory(cat.id)
+                  setExpandedItem(null)
+                  setAiMode(null)
+                  setAiResponse('')
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition whitespace-nowrap flex-shrink-0 ${
+                  activeCategory === cat.id
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                }`}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.title}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Right Arrow */}
+          <button
+            onClick={() => {
+              const container = document.getElementById('category-tabs')
+              container.scrollBy({ left: 200, behavior: 'smooth' })
+            }}
+            className="flex-shrink-0 w-8 h-8 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition"
+          >
+            →
+          </button>
         </div>
 
         {/* Category Header */}

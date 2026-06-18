@@ -12,6 +12,9 @@ function Settings() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
+  const [showCurrentPw, setShowCurrentPw] = useState(false)
+  const [showNewPw, setShowNewPw] = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
 
   const savedAppSettings = JSON.parse(localStorage.getItem('bridgevoice_settings') || '{}')
 
@@ -43,6 +46,38 @@ function Settings() {
     window.speechSynthesis.onvoiceschanged = loadVoices
   }, [])
 
+  // ===== PASSWORD STRENGTH =====
+  const getPasswordStrength = (password) => {
+    if (!password) return { score: 0, label: '', color: '' }
+
+    let score = 0
+    const checks = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+    }
+
+    score = Object.values(checks).filter(Boolean).length
+
+    if (score <= 1) return { score: 1, label: 'Very Weak', color: 'bg-red-500', textColor: 'text-red-400', checks }
+    if (score === 2) return { score: 2, label: 'Weak', color: 'bg-orange-500', textColor: 'text-orange-400', checks }
+    if (score === 3) return { score: 3, label: 'Fair', color: 'bg-yellow-500', textColor: 'text-yellow-400', checks }
+    if (score === 4) return { score: 4, label: 'Strong', color: 'bg-blue-500', textColor: 'text-blue-400', checks }
+    return { score: 5, label: 'Very Strong', color: 'bg-green-500', textColor: 'text-green-400', checks }
+  }
+
+  const strength = getPasswordStrength(passwordData.new)
+
+  const passwordRequirements = [
+    { key: 'length', label: 'At least 8 characters', met: passwordData.new.length >= 8 },
+    { key: 'uppercase', label: 'One uppercase letter (A-Z)', met: /[A-Z]/.test(passwordData.new) },
+    { key: 'lowercase', label: 'One lowercase letter (a-z)', met: /[a-z]/.test(passwordData.new) },
+    { key: 'number', label: 'One number (0-9)', met: /[0-9]/.test(passwordData.new) },
+    { key: 'special', label: 'One special character (!@#$...)', met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(passwordData.new) },
+  ]
+
   const selectVoice = (name) => {
     setVoiceName(name)
     localStorage.setItem('voiceName', name)
@@ -72,7 +107,6 @@ function Settings() {
     const email = localStorage.getItem('email')
     if (!email) return
 
-    // Sync to database for fields that are stored there
     const dbFieldMap = {
       nativeLanguage: 'language_background',
       proficiencyLevel: 'proficiency_level',
@@ -127,6 +161,7 @@ function Settings() {
 
   const handleChangePassword = async () => {
     setPasswordError('')
+
     if (!passwordData.current || !passwordData.new || !passwordData.confirm) {
       setPasswordError('Please fill in all fields')
       return
@@ -135,10 +170,23 @@ function Settings() {
       setPasswordError('New password must be at least 8 characters')
       return
     }
+    if (!/[A-Z]/.test(passwordData.new)) {
+      setPasswordError('Password must contain at least one uppercase letter')
+      return
+    }
+    if (!/[0-9]/.test(passwordData.new)) {
+      setPasswordError('Password must contain at least one number')
+      return
+    }
     if (passwordData.new !== passwordData.confirm) {
       setPasswordError('Passwords do not match')
       return
     }
+    if (strength.score < 3) {
+      setPasswordError('Please choose a stronger password')
+      return
+    }
+
     setChangingPassword(true)
     try {
       const response = await fetch('http://127.0.0.1:8000/api/users/change-password', {
@@ -234,11 +282,7 @@ function Settings() {
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
           <SectionHeader title="Learning Preferences" />
 
-          <SettingRow
-            icon="🌍"
-            title="Native Language"
-            desc="Your first language — used for AI explanations"
-          >
+          <SettingRow icon="🌍" title="Native Language" desc="Your first language — used for AI explanations">
             <select
               value={settings.nativeLanguage}
               onChange={e => updateSetting('nativeLanguage', e.target.value)}
@@ -251,11 +295,7 @@ function Settings() {
           </SettingRow>
 
           <div className="border-t border-gray-800">
-            <SettingRow
-              icon="📊"
-              title="English Level"
-              desc="Used to personalize your challenges and quizzes"
-            >
+            <SettingRow icon="📊" title="English Level" desc="Used to personalize your challenges and quizzes">
               <select
                 value={settings.proficiencyLevel}
                 onChange={e => updateSetting('proficiencyLevel', e.target.value)}
@@ -269,11 +309,7 @@ function Settings() {
           </div>
 
           <div className="border-t border-gray-800">
-            <SettingRow
-              icon="🎯"
-              title="Daily Goal"
-              desc="How many sessions you want to complete each day"
-            >
+            <SettingRow icon="🎯" title="Daily Goal" desc="How many sessions you want to complete each day">
               <select
                 value={settings.dailyGoal}
                 onChange={e => updateSetting('dailyGoal', e.target.value)}
@@ -291,31 +327,19 @@ function Settings() {
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
           <SectionHeader title="Notifications" />
 
-          <SettingRow
-            icon="🔔"
-            title="Push Notifications"
-            desc="Get notified about your progress and streaks"
-          >
+          <SettingRow icon="🔔" title="Push Notifications" desc="Get notified about your progress and streaks">
             <Toggle value={settings.notifications} onToggle={() => toggle('notifications')} />
           </SettingRow>
 
           <div className="border-t border-gray-800">
-            <SettingRow
-              icon="⏰"
-              title="Daily Reminder"
-              desc="Remind me to practice every day"
-            >
+            <SettingRow icon="⏰" title="Daily Reminder" desc="Remind me to practice every day">
               <Toggle value={settings.dailyReminder} onToggle={() => toggle('dailyReminder')} />
             </SettingRow>
           </div>
 
           {settings.dailyReminder && (
             <div className="border-t border-gray-800">
-              <SettingRow
-                icon="🕐"
-                title="Reminder Time"
-                desc="What time should we remind you?"
-              >
+              <SettingRow icon="🕐" title="Reminder Time" desc="What time should we remind you?">
                 <input
                   type="time"
                   value={settings.reminderTime}
@@ -331,11 +355,7 @@ function Settings() {
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
           <SectionHeader title="Audio & Voice" />
 
-          <SettingRow
-            icon="🤖"
-            title="Auto Speak"
-            desc="AI automatically reads responses out loud"
-          >
+          <SettingRow icon="🤖" title="Auto Speak" desc="AI automatically reads responses out loud">
             <Toggle value={settings.autoSpeak} onToggle={() => toggle('autoSpeak')} />
           </SettingRow>
 
@@ -410,11 +430,7 @@ function Settings() {
           </SettingRow>
 
           <div className="border-t border-gray-800">
-            <SettingRow
-              icon="🔤"
-              title="Font Size"
-              desc="Adjust the text size across the app"
-            >
+            <SettingRow icon="🔤" title="Font Size" desc="Adjust the text size across the app">
               <div className="flex gap-1">
                 {['small', 'medium', 'large', 'xlarge'].map(size => (
                   <button
@@ -438,11 +454,7 @@ function Settings() {
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
           <SectionHeader title="Account" />
 
-          <SettingRow
-            icon="👤"
-            title="Edit Profile"
-            desc="Update your name, photo and learning goals"
-          >
+          <SettingRow icon="👤" title="Edit Profile" desc="Update your name, photo and learning goals">
             <button
               onClick={() => navigate('/profile')}
               className="border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-xl text-xs font-medium transition"
@@ -452,11 +464,7 @@ function Settings() {
           </SettingRow>
 
           <div className="border-t border-gray-800">
-            <SettingRow
-              icon="💎"
-              title="Upgrade Plan"
-              desc="Unlock unlimited access to all features"
-            >
+            <SettingRow icon="💎" title="Upgrade Plan" desc="Unlock unlimited access to all features">
               <button
                 onClick={() => navigate('/pricing')}
                 className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition"
@@ -467,11 +475,7 @@ function Settings() {
           </div>
 
           <div className="border-t border-gray-800">
-            <SettingRow
-              icon="🔑"
-              title="Change Password"
-              desc="Update your account password"
-            >
+            <SettingRow icon="🔑" title="Change Password" desc="Update your account password">
               <button
                 onClick={() => setShowPasswordModal(true)}
                 className="border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-xl text-xs font-medium transition"
@@ -482,11 +486,7 @@ function Settings() {
           </div>
 
           <div className="border-t border-gray-800">
-            <SettingRow
-              icon="📤"
-              title="Sign Out"
-              desc="Sign out of your BridgeVoice account"
-            >
+            <SettingRow icon="📤" title="Sign Out" desc="Sign out of your BridgeVoice account">
               <button
                 onClick={() => {
                   localStorage.removeItem('token')
@@ -506,11 +506,7 @@ function Settings() {
           <div className="px-5 py-3 border-b border-red-900 border-opacity-30">
             <p className="text-xs font-bold text-red-500 uppercase tracking-wider">Danger Zone</p>
           </div>
-          <SettingRow
-            icon="🗑️"
-            title="Clear All Data"
-            desc="Reset all local preferences on this device — XP and progress are safe in your account"
-          >
+          <SettingRow icon="🗑️" title="Clear All Data" desc="Reset all local preferences on this device — XP and progress are safe in your account">
             <button
               onClick={() => setShowDeleteModal(true)}
               className="border border-red-900 text-red-500 hover:bg-red-900 hover:bg-opacity-20 px-3 py-1.5 rounded-xl text-xs font-medium transition"
@@ -551,44 +547,120 @@ function Settings() {
                 <>
                   <p className="text-3xl text-center mb-3">🔑</p>
                   <h3 className="text-lg font-bold text-white text-center mb-1">Change Password</h3>
-                  <p className="text-gray-500 text-sm text-center mb-5">Enter your current and new password</p>
+                  <p className="text-gray-500 text-sm text-center mb-5">Create a strong password to protect your account</p>
 
                   {passwordError && (
                     <div className="bg-red-900 bg-opacity-30 border border-red-800 text-red-300 px-4 py-2.5 rounded-xl mb-4 text-sm">
-                      {passwordError}
+                      ❌ {passwordError}
                     </div>
                   )}
 
-                  <div className="space-y-3 mb-5">
+                  <div className="space-y-3 mb-4">
+                    {/* Current Password */}
                     <div>
                       <label className="block text-xs font-medium text-gray-400 mb-1.5">Current Password</label>
-                      <input
-                        type="password"
-                        value={passwordData.current}
-                        onChange={e => setPasswordData({ ...passwordData, current: e.target.value })}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-purple-500 transition text-sm"
-                        placeholder="Enter current password"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showCurrentPw ? 'text' : 'password'}
+                          value={passwordData.current}
+                          onChange={e => setPasswordData({ ...passwordData, current: e.target.value })}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-purple-500 transition text-sm pr-10"
+                          placeholder="Enter current password"
+                        />
+                        <button
+                          onClick={() => setShowCurrentPw(!showCurrentPw)}
+                          className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300 text-xs"
+                        >
+                          {showCurrentPw ? '🙈' : '👁️'}
+                        </button>
+                      </div>
                     </div>
+
+                    {/* New Password */}
                     <div>
                       <label className="block text-xs font-medium text-gray-400 mb-1.5">New Password</label>
-                      <input
-                        type="password"
-                        value={passwordData.new}
-                        onChange={e => setPasswordData({ ...passwordData, new: e.target.value })}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-purple-500 transition text-sm"
-                        placeholder="Min 8 characters"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showNewPw ? 'text' : 'password'}
+                          value={passwordData.new}
+                          onChange={e => setPasswordData({ ...passwordData, new: e.target.value })}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-purple-500 transition text-sm pr-10"
+                          placeholder="Create new password"
+                        />
+                        <button
+                          onClick={() => setShowNewPw(!showNewPw)}
+                          className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300 text-xs"
+                        >
+                          {showNewPw ? '🙈' : '👁️'}
+                        </button>
+                      </div>
+
+                      {/* Password Strength Bar */}
+                      {passwordData.new && (
+                        <div className="mt-2">
+                          <div className="flex gap-1 mb-1">
+                            {[1, 2, 3, 4, 5].map(i => (
+                              <div
+                                key={i}
+                                className={`h-1.5 flex-1 rounded-full transition-all ${
+                                  i <= strength.score ? strength.color : 'bg-gray-700'
+                                }`}
+                              ></div>
+                            ))}
+                          </div>
+                          <p className={`text-xs font-medium ${strength.textColor}`}>
+                            {strength.label}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Requirements */}
+                      {passwordData.new && (
+                        <div className="mt-2 space-y-1">
+                          {passwordRequirements.map((req, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className={`text-xs ${req.met ? 'text-green-400' : 'text-gray-600'}`}>
+                                {req.met ? '✅' : '○'}
+                              </span>
+                              <span className={`text-xs ${req.met ? 'text-green-400' : 'text-gray-500'}`}>
+                                {req.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
+
+                    {/* Confirm Password */}
                     <div>
                       <label className="block text-xs font-medium text-gray-400 mb-1.5">Confirm New Password</label>
-                      <input
-                        type="password"
-                        value={passwordData.confirm}
-                        onChange={e => setPasswordData({ ...passwordData, confirm: e.target.value })}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-purple-500 transition text-sm"
-                        placeholder="Repeat new password"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showConfirmPw ? 'text' : 'password'}
+                          value={passwordData.confirm}
+                          onChange={e => setPasswordData({ ...passwordData, confirm: e.target.value })}
+                          className={`w-full bg-gray-800 border rounded-xl px-4 py-2.5 text-white focus:outline-none transition text-sm pr-10 ${
+                            passwordData.confirm && passwordData.new !== passwordData.confirm
+                              ? 'border-red-700 focus:border-red-500'
+                              : passwordData.confirm && passwordData.new === passwordData.confirm
+                              ? 'border-green-700 focus:border-green-500'
+                              : 'border-gray-700 focus:border-purple-500'
+                          }`}
+                          placeholder="Repeat new password"
+                        />
+                        <button
+                          onClick={() => setShowConfirmPw(!showConfirmPw)}
+                          className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300 text-xs"
+                        >
+                          {showConfirmPw ? '🙈' : '👁️'}
+                        </button>
+                      </div>
+                      {passwordData.confirm && passwordData.new !== passwordData.confirm && (
+                        <p className="text-red-400 text-xs mt-1">❌ Passwords do not match</p>
+                      )}
+                      {passwordData.confirm && passwordData.new === passwordData.confirm && (
+                        <p className="text-green-400 text-xs mt-1">✅ Passwords match</p>
+                      )}
                     </div>
                   </div>
 
@@ -605,7 +677,7 @@ function Settings() {
                     </button>
                     <button
                       onClick={handleChangePassword}
-                      disabled={changingPassword}
+                      disabled={changingPassword || strength.score < 3 || passwordData.new !== passwordData.confirm}
                       className="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl text-sm font-bold transition disabled:opacity-50"
                     >
                       {changingPassword ? 'Saving...' : 'Save Password'}

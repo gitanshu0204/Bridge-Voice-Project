@@ -19,10 +19,13 @@ import GrammarChecker from './pages/GrammarChecker'
 import PronunciationScorer from './pages/PronunciationScorer'
 import DailyChallenge from './pages/DailyChallenge'
 import Pricing from './pages/Pricing'
+import NotFound from './pages/NotFound'
+import ScrollToTop from './components/ScrollToTop'
 
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -44,7 +47,7 @@ function App() {
         <Route path="/pronunciation" element={<PronunciationScorer />} />
         <Route path="/daily" element={<DailyChallenge />} />
         <Route path="/pricing" element={<Pricing />} />
-
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   )
