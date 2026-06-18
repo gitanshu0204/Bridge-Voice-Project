@@ -1,25 +1,63 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { characterPresets, speakWithSettings } from '../utils/voiceSettings'
 
 function Settings() {
   const navigate = useNavigate()
   const [saved, setSaved] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' })
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+
+  const savedAppSettings = JSON.parse(localStorage.getItem('bridgevoice_settings') || '{}')
 
   const [settings, setSettings] = useState({
     notifications: localStorage.getItem('notif') !== 'false',
     dailyReminder: localStorage.getItem('dailyReminder') !== 'false',
-    soundEffects: localStorage.getItem('soundEffects') !== 'false',
     autoSpeak: localStorage.getItem('autoSpeak') !== 'false',
-    darkMode: true,
-    fontSize: localStorage.getItem('fontSize') || 'Medium',
-    language: localStorage.getItem('appLanguage') || 'English',
     nativeLanguage: localStorage.getItem('nativeLanguage') || 'Hindi',
     proficiencyLevel: localStorage.getItem('proficiencyLevel') || 'Beginner',
     dailyGoal: localStorage.getItem('dailyGoal') || '3',
     reminderTime: localStorage.getItem('reminderTime') || '09:00',
+    theme: savedAppSettings.theme || 'dark',
+    fontSize: savedAppSettings.fontSize || 'medium',
   })
+
+  const [voices, setVoices] = useState([])
+  const [voiceName, setVoiceName] = useState(localStorage.getItem('voiceName') || '')
+  const [character, setCharacter] = useState(localStorage.getItem('voiceCharacter') || 'Polite')
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const available = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'))
+      setVoices(available)
+      if (!voiceName && available.length > 0) {
+        setVoiceName(available[0].name)
+      }
+    }
+    loadVoices()
+    window.speechSynthesis.onvoiceschanged = loadVoices
+  }, [])
+
+  const selectVoice = (name) => {
+    setVoiceName(name)
+    localStorage.setItem('voiceName', name)
+  }
+
+  const selectCharacter = (name) => {
+    setCharacter(name)
+    localStorage.setItem('voiceCharacter', name)
+  }
+
+  const previewVoice = () => {
+    localStorage.setItem('voiceName', voiceName)
+    localStorage.setItem('voiceCharacter', character)
+    speakWithSettings("Hello! Welcome to BridgeVoice. Let's practice English together.")
+  }
 
   const toggle = (key) => {
     const newVal = !settings[key]
@@ -27,9 +65,47 @@ function Settings() {
     localStorage.setItem(key, newVal.toString())
   }
 
-  const updateSetting = (key, value) => {
+  const updateSetting = async (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }))
     localStorage.setItem(key, value)
+
+    const email = localStorage.getItem('email')
+    if (!email) return
+
+    // Sync to database for fields that are stored there
+    const dbFieldMap = {
+      nativeLanguage: 'language_background',
+      proficiencyLevel: 'proficiency_level',
+    }
+
+    if (dbFieldMap[key]) {
+      try {
+        await fetch(`http://127.0.0.1:8000/api/users/profile?email=${encodeURIComponent(email)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [dbFieldMap[key]]: value })
+        })
+      } catch (err) {
+        console.log('Could not sync setting to database', err)
+      }
+    }
+  }
+
+  const toggleTheme = () => {
+    const newTheme = settings.theme === 'dark' ? 'light' : 'dark'
+    setSettings(prev => ({ ...prev, theme: newTheme }))
+    document.documentElement.setAttribute('data-theme', newTheme)
+    const appSettings = JSON.parse(localStorage.getItem('bridgevoice_settings') || '{}')
+    appSettings.theme = newTheme
+    localStorage.setItem('bridgevoice_settings', JSON.stringify(appSettings))
+  }
+
+  const setFontSize = (size) => {
+    setSettings(prev => ({ ...prev, fontSize: size }))
+    document.documentElement.setAttribute('data-fontsize', size)
+    const appSettings = JSON.parse(localStorage.getItem('bridgevoice_settings') || '{}')
+    appSettings.fontSize = size
+    localStorage.setItem('bridgevoice_settings', JSON.stringify(appSettings))
   }
 
   const saveSettings = () => {
@@ -41,11 +117,54 @@ function Settings() {
   }
 
   const clearData = () => {
-    const keep = ['token', 'email', 'profilePic']
+    const keep = ['token', 'email']
     const toRemove = Object.keys(localStorage).filter(k => !keep.includes(k))
     toRemove.forEach(k => localStorage.removeItem(k))
+    document.documentElement.setAttribute('data-theme', 'dark')
     setShowDeleteModal(false)
     navigate('/dashboard')
+  }
+
+  const handleChangePassword = async () => {
+    setPasswordError('')
+    if (!passwordData.current || !passwordData.new || !passwordData.confirm) {
+      setPasswordError('Please fill in all fields')
+      return
+    }
+    if (passwordData.new.length < 8) {
+      setPasswordError('New password must be at least 8 characters')
+      return
+    }
+    if (passwordData.new !== passwordData.confirm) {
+      setPasswordError('Passwords do not match')
+      return
+    }
+    setChangingPassword(true)
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/users/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: localStorage.getItem('email'),
+          current_password: passwordData.current,
+          new_password: passwordData.new
+        })
+      })
+      const data = await response.json()
+      if (response.ok) {
+        setPasswordSuccess(true)
+        setPasswordData({ current: '', new: '', confirm: '' })
+        setTimeout(() => {
+          setPasswordSuccess(false)
+          setShowPasswordModal(false)
+        }, 2000)
+      } else {
+        setPasswordError(data.detail || 'Could not change password')
+      }
+    } catch (err) {
+      setPasswordError('Cannot connect to server')
+    }
+    setChangingPassword(false)
   }
 
   const Toggle = ({ value, onToggle }) => (
@@ -104,7 +223,7 @@ function Settings() {
               </div>
               <h2 className="text-3xl font-bold text-white mb-2">Settings</h2>
               <p className="text-gray-400 text-sm max-w-md leading-relaxed">
-                Customize your BridgeVoice experience. All changes are saved automatically.
+                Customize your BridgeVoice experience. Changes apply instantly across the app.
               </p>
             </div>
             <div className="hidden md:block text-8xl opacity-10">⚙️</div>
@@ -210,24 +329,60 @@ function Settings() {
 
         {/* Audio Settings */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-          <SectionHeader title="Audio" />
+          <SectionHeader title="Audio & Voice" />
 
           <SettingRow
-            icon="🔊"
-            title="Sound Effects"
-            desc="Play sounds for correct and wrong answers"
+            icon="🤖"
+            title="Auto Speak"
+            desc="AI automatically reads responses out loud"
           >
-            <Toggle value={settings.soundEffects} onToggle={() => toggle('soundEffects')} />
+            <Toggle value={settings.autoSpeak} onToggle={() => toggle('autoSpeak')} />
           </SettingRow>
 
-          <div className="border-t border-gray-800">
-            <SettingRow
-              icon="🤖"
-              title="Auto Speak"
-              desc="AI automatically reads responses out loud"
+          <div className="border-t border-gray-800 px-5 py-4">
+            <p className="font-medium text-gray-200 text-sm mb-1">🗣️ Voice</p>
+            <p className="text-gray-500 text-xs mb-3">Choose which voice reads text aloud across the app</p>
+            <select
+              value={voiceName}
+              onChange={e => selectVoice(e.target.value)}
+              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 transition text-sm"
             >
-              <Toggle value={settings.autoSpeak} onToggle={() => toggle('autoSpeak')} />
-            </SettingRow>
+              {voices.length === 0 && <option>Loading voices...</option>}
+              {voices.map(v => (
+                <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="border-t border-gray-800 px-5 py-4">
+            <p className="font-medium text-gray-200 text-sm mb-1">🎭 Character</p>
+            <p className="text-gray-500 text-xs mb-3">Adjusts speaking style — tone and pace</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {Object.entries(characterPresets).map(([name, preset]) => (
+                <button
+                  key={name}
+                  onClick={() => selectCharacter(name)}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition ${
+                    character === name
+                      ? 'border-purple-500 bg-purple-900 bg-opacity-30'
+                      : 'border-gray-700 hover:border-gray-500 bg-gray-800 bg-opacity-50'
+                  }`}
+                >
+                  <span className="text-xl">{preset.icon}</span>
+                  <span className="text-xs font-medium text-gray-300">{name}</span>
+                  <span className="text-xs text-gray-600">{preset.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-gray-800 px-5 py-4">
+            <button
+              onClick={previewVoice}
+              className="w-full bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl font-medium transition text-sm flex items-center justify-center gap-2"
+            >
+              🔊 Preview Voice
+            </button>
           </div>
         </div>
 
@@ -236,11 +391,22 @@ function Settings() {
           <SectionHeader title="Display" />
 
           <SettingRow
-            icon="🌙"
-            title="Dark Mode"
-            desc="BridgeVoice looks best in dark mode"
+            icon={settings.theme === 'dark' ? '🌙' : '☀️'}
+            title="Theme"
+            desc={settings.theme === 'dark' ? 'Currently using dark mode' : 'Currently using light mode'}
           >
-            <Toggle value={settings.darkMode} onToggle={() => toggle('darkMode')} />
+            <button
+              onClick={toggleTheme}
+              className={`w-16 h-8 rounded-full transition-all relative flex-shrink-0 ${
+                settings.theme === 'light' ? 'bg-yellow-500' : 'bg-purple-600'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-full absolute top-1 transition-all shadow-sm flex items-center justify-center text-xs ${
+                settings.theme === 'light' ? 'translate-x-9 bg-white' : 'translate-x-1 bg-white'
+              }`}>
+                {settings.theme === 'dark' ? '🌙' : '☀️'}
+              </div>
+            </button>
           </SettingRow>
 
           <div className="border-t border-gray-800">
@@ -250,17 +416,17 @@ function Settings() {
               desc="Adjust the text size across the app"
             >
               <div className="flex gap-1">
-                {['Small', 'Medium', 'Large'].map(size => (
+                {['small', 'medium', 'large', 'xlarge'].map(size => (
                   <button
                     key={size}
-                    onClick={() => updateSetting('fontSize', size)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                    onClick={() => setFontSize(size)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition capitalize ${
                       settings.fontSize === size
                         ? 'bg-purple-600 text-white'
                         : 'bg-gray-800 border border-gray-700 text-gray-400 hover:text-white'
                     }`}
                   >
-                    {size}
+                    {size === 'xlarge' ? 'XL' : size.charAt(0).toUpperCase() + size.slice(1)}
                   </button>
                 ))}
               </div>
@@ -306,7 +472,10 @@ function Settings() {
               title="Change Password"
               desc="Update your account password"
             >
-              <button className="border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-xl text-xs font-medium transition">
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-xl text-xs font-medium transition"
+              >
                 Change
               </button>
             </SettingRow>
@@ -340,7 +509,7 @@ function Settings() {
           <SettingRow
             icon="🗑️"
             title="Clear All Data"
-            desc="Delete all your progress, XP and saved data — cannot be undone"
+            desc="Reset all local preferences on this device — XP and progress are safe in your account"
           >
             <button
               onClick={() => setShowDeleteModal(true)}
@@ -367,6 +536,88 @@ function Settings() {
 
       </div>
 
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
+          <div className="relative max-w-sm w-full">
+            <div className="absolute inset-0 bg-purple-900 rounded-2xl blur-xl opacity-10"></div>
+            <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl">
+              {passwordSuccess ? (
+                <div className="text-center py-4">
+                  <p className="text-4xl mb-3">✅</p>
+                  <p className="text-green-400 font-bold">Password changed successfully!</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-3xl text-center mb-3">🔑</p>
+                  <h3 className="text-lg font-bold text-white text-center mb-1">Change Password</h3>
+                  <p className="text-gray-500 text-sm text-center mb-5">Enter your current and new password</p>
+
+                  {passwordError && (
+                    <div className="bg-red-900 bg-opacity-30 border border-red-800 text-red-300 px-4 py-2.5 rounded-xl mb-4 text-sm">
+                      {passwordError}
+                    </div>
+                  )}
+
+                  <div className="space-y-3 mb-5">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5">Current Password</label>
+                      <input
+                        type="password"
+                        value={passwordData.current}
+                        onChange={e => setPasswordData({ ...passwordData, current: e.target.value })}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-purple-500 transition text-sm"
+                        placeholder="Enter current password"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5">New Password</label>
+                      <input
+                        type="password"
+                        value={passwordData.new}
+                        onChange={e => setPasswordData({ ...passwordData, new: e.target.value })}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-purple-500 transition text-sm"
+                        placeholder="Min 8 characters"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1.5">Confirm New Password</label>
+                      <input
+                        type="password"
+                        value={passwordData.confirm}
+                        onChange={e => setPasswordData({ ...passwordData, confirm: e.target.value })}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-purple-500 transition text-sm"
+                        placeholder="Repeat new password"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setShowPasswordModal(false)
+                        setPasswordError('')
+                        setPasswordData({ current: '', new: '', confirm: '' })
+                      }}
+                      className="flex-1 border border-gray-700 text-gray-300 hover:text-white py-2.5 rounded-xl text-sm font-medium transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleChangePassword}
+                      disabled={changingPassword}
+                      className="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl text-sm font-bold transition disabled:opacity-50"
+                    >
+                      {changingPassword ? 'Saving...' : 'Save Password'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
@@ -374,9 +625,9 @@ function Settings() {
             <div className="absolute inset-0 bg-red-900 rounded-2xl blur-xl opacity-10"></div>
             <div className="relative bg-gray-900 border border-red-800 rounded-2xl p-6 shadow-2xl">
               <p className="text-3xl text-center mb-3">⚠️</p>
-              <h3 className="text-lg font-bold text-white text-center mb-2">Clear All Data?</h3>
+              <h3 className="text-lg font-bold text-white text-center mb-2">Clear Local Settings?</h3>
               <p className="text-gray-400 text-sm text-center mb-5">
-                This will delete all your XP, progress, saved words and challenge history. This cannot be undone!
+                This will reset your local preferences (voice, theme, language, reminders). Your XP, progress and activity history are saved in your account and won't be affected.
               </p>
               <div className="flex gap-3">
                 <button

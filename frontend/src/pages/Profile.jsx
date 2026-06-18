@@ -7,7 +7,7 @@ import { getProgress } from '../utils/xpTracker'
 function Profile() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
-  const [profilePic, setProfilePic] = useState(localStorage.getItem('profilePic') || null)
+  const [profilePic, setProfilePic] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [editing, setEditing] = useState(false)
   const [editData, setEditData] = useState({})
@@ -62,6 +62,9 @@ function Profile() {
       .then(data => {
         setUser(data)
         setEditData(data)
+        if (data.profile_picture) {
+          setProfilePic(data.profile_picture)
+        }
       })
       .catch(err => console.log(err))
 
@@ -80,14 +83,25 @@ function Profile() {
   const handleImageUpload = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Image must be smaller than 2MB!')
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be smaller than 5MB!')
       return
     }
     const reader = new FileReader()
-    reader.onloadend = () => {
-      setProfilePic(reader.result)
-      localStorage.setItem('profilePic', reader.result)
+    reader.onloadend = async () => {
+      const base64 = reader.result
+      setProfilePic(base64)
+
+      const email = localStorage.getItem('email')
+      try {
+        await fetch(`http://127.0.0.1:8000/api/users/profile?email=${encodeURIComponent(email)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile_picture: base64 })
+        })
+      } catch (err) {
+        console.log('Could not save profile picture', err)
+      }
     }
     reader.readAsDataURL(file)
   }
@@ -99,9 +113,19 @@ function Profile() {
     setTimeout(() => setSaved(false), 3000)
   }
 
-  const removePhoto = () => {
+  const removePhoto = async () => {
     setProfilePic(null)
-    localStorage.removeItem('profilePic')
+
+    const email = localStorage.getItem('email')
+    try {
+      await fetch(`http://127.0.0.1:8000/api/users/profile?email=${encodeURIComponent(email)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_picture: '' })
+      })
+    } catch (err) {
+      console.log('Could not remove profile picture', err)
+    }
   }
 
   const getLevel = (xp) => {

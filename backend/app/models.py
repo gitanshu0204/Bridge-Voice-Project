@@ -12,6 +12,7 @@ class User(Base):
     language_background = Column(String, nullable=True)
     proficiency_level = Column(String, nullable=True)
     goals = Column(String, nullable=True)
+    profile_picture = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
 class Conversation(Base):
@@ -41,4 +42,13 @@ class ActivityLog(Base):
     score = Column(Integer, nullable=False)
     detail = Column(String, nullable=True)
     date = Column(String, nullable=False)  # YYYY-MM-DD
+    created_at = Column(DateTime, server_default=func.now())
+
+class Post(Base):
+    __tablename__ = "posts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_email = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    likes = Column(Integer, default=0)
     created_at = Column(DateTime, server_default=func.now())

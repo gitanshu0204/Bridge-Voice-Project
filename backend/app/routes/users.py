@@ -5,6 +5,7 @@ from app.models import User
 from app.schemas import UserRegister, UserLogin, UserResponse, Token
 from app.auth import hash_password, verify_password, create_access_token
 from app.schemas import UserUpdate
+from app.schemas import PasswordChange
 
 router = APIRouter()
 
@@ -63,7 +64,25 @@ def update_profile(email: str, data: UserUpdate, db: Session = Depends(get_db)):
         user.proficiency_level = data.proficiency_level
     if data.goals is not None:
         user.goals = data.goals
+    if data.profile_picture is not None:
+        user.profile_picture = data.profile_picture
 
     db.commit()
     db.refresh(user)
     return user
+
+@router.post("/change-password")
+def change_password(data: PasswordChange, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(data.current_password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    if len(data.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+
+    user.hashed_password = hash_password(data.new_password)
+    db.commit()
+    return {"success": True}

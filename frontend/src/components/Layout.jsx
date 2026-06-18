@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import Logo from '../assets/logo'
 
@@ -7,6 +7,34 @@ function Layout({ children }) {
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [userName, setUserName] = useState('')
+  const [userPic, setUserPic] = useState(null)
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    const email = localStorage.getItem('email')
+    if (!email) return
+    fetch(`http://127.0.0.1:8000/api/users/profile?email=${email}`)
+      .then(res => res.json())
+      .then(data => {
+        setUserName(data.full_name || '')
+        setUserPic(data.profile_picture || null)
+      })
+      .catch(() => setUserName(''))
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const initial = userName ? userName.charAt(0).toUpperCase() : '?'
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -73,7 +101,7 @@ function Layout({ children }) {
         </div>
 
         {/* Nav Items */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2">
+        <nav className="flex-1 overflow-y-auto py-4 px-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {navItems.map((section, si) => (
             <div key={si} className="mb-4">
               {!collapsed && (
@@ -139,10 +167,57 @@ function Layout({ children }) {
             ☰
           </button>
 
-          <div className="flex items-center gap-3 ml-auto">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-sm font-bold">
-              G
-            </div>
+          <div className="flex items-center gap-3 ml-auto relative" ref={dropdownRef}>
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-sm font-bold hover:opacity-80 transition"
+            >
+              {userPic ? (
+                <img src={userPic} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                initial
+              )}
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute right-0 top-10 w-52 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden z-50">
+                <div className="px-4 py-3 border-b border-gray-800">
+                  <p className="text-sm font-semibold text-white truncate">{userName || 'User'}</p>
+                  <p className="text-xs text-gray-500 truncate">{localStorage.getItem('email')}</p>
+                </div>
+                <div className="py-1">
+                  <Link
+                    to="/profile"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
+                  >
+                    <span>👤</span> Profile
+                  </Link>
+                  <Link
+                    to="/settings"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
+                  >
+                    <span>⚙️</span> Settings
+                  </Link>
+                  <Link
+                    to="/progress"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
+                  >
+                    <span>📊</span> Progress
+                  </Link>
+                </div>
+                <div className="border-t border-gray-800 py-1">
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-900 hover:bg-opacity-20 transition w-full text-left"
+                  >
+                    <span>🚪</span> Logout
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 

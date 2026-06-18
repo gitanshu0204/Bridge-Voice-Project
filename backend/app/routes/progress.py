@@ -4,6 +4,7 @@ from app.database import get_db
 from app.models import UserProgress, ActivityLog
 from app.schemas import ActivityLogCreate, AddXPRequest
 from datetime import datetime, timedelta
+from app.models import User
 
 router = APIRouter()
 
@@ -84,3 +85,22 @@ def get_activity_log(email: str, limit: int = 100, db: Session = Depends(get_db)
         }
         for e in entries
     ]
+
+@router.get("/leaderboard")
+def get_leaderboard(email: str = None, db: Session = Depends(get_db)):
+    results = db.query(UserProgress, User).join(
+        User, UserProgress.user_email == User.email
+    ).order_by(UserProgress.total_xp.desc()).limit(20).all()
+
+    leaderboard = []
+    for i, (progress, user) in enumerate(results):
+        leaderboard.append({
+            "rank": i + 1,
+            "name": user.full_name,
+            "email": user.email,
+            "xp": progress.total_xp,
+            "streak": progress.streak,
+            "is_you": user.email == email
+        })
+
+    return leaderboard

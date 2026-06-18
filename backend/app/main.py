@@ -16,6 +16,7 @@ from app.routes import culture_guide
 from app.routes import interview_ai
 from app.routes import translator_quiz
 from app.routes import progress
+from app.routes import community
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -43,6 +44,7 @@ app.include_router(culture_guide.router, prefix="/api", tags=["culture-guide"])
 app.include_router(interview_ai.router, prefix="/api", tags=["interview-ai"])
 app.include_router(translator_quiz.router, prefix="/api", tags=["translator-quiz"])
 app.include_router(progress.router, prefix="/api", tags=["progress"])
+app.include_router(community.router, prefix="/api", tags=["community"])
 
 @app.get("/")
 def root():

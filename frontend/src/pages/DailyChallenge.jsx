@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { addXP, getProgress } from '../utils/xpTracker'
+import { logActivity } from '../utils/activityTracker'
+import { speakWithSettings } from '../utils/voiceSettings'
 
 function DailyChallenge() {
   const navigate = useNavigate()
@@ -20,14 +23,10 @@ function DailyChallenge() {
   const [proficiencyLevel, setProficiencyLevel] = useState(
     localStorage.getItem('proficiencyLevel') || 'Beginner'
   )
-  const [totalXP, setTotalXP] = useState(
-    parseInt(localStorage.getItem('totalXP') || '0')
-  )
+  const [totalXP, setTotalXP] = useState(0)
+  const [streak, setStreak] = useState(0)
   const [showNative, setShowNative] = useState(false)
   const [challengeDate, setChallengeDate] = useState('')
-  const [streak, setStreak] = useState(
-    parseInt(localStorage.getItem('streak') || '7')
-  )
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -40,6 +39,11 @@ function DailyChallenge() {
     } else {
       generateChallenges()
     }
+
+    getProgress().then(p => {
+      setTotalXP(p.total_xp || 0)
+      setStreak(p.streak || 0)
+    })
   }, [])
 
   const generateChallenges = async () => {
@@ -111,9 +115,14 @@ function DailyChallenge() {
       setCompletedChallenges(newCompleted)
       localStorage.setItem('completedChallenges', JSON.stringify(newCompleted))
 
-      const newXP = totalXP + (data.xp_earned || 20)
-      setTotalXP(newXP)
-      localStorage.setItem('totalXP', newXP.toString())
+      // Log activity + add XP to database
+      logActivity({ type: 'daily_challenge', score: data.score, detail: activeChallenge.title })
+
+      const xpResult = await addXP(data.xp_earned || 20, `Daily Challenge: ${activeChallenge.title}`)
+      if (xpResult) {
+        setTotalXP(xpResult.total_xp)
+        setStreak(xpResult.streak)
+      }
 
     } catch (err) {
       console.log('Submit error')
@@ -131,12 +140,7 @@ function DailyChallenge() {
   const completedCount = challenges.filter((_, i) => isCompleted(i)).length
 
   const speakText = (text) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = 'en-CA'
-      utterance.rate = 0.9
-      window.speechSynthesis.speak(utterance)
-    }
+    speakWithSettings(text)
   }
 
   return (

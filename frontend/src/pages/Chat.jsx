@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import { checkLimit, trackUsage } from '../utils/usageTracker'
 import UpgradeModal from '../components/UpgradeModal'
+import { speakWithSettings } from '../utils/voiceSettings'
 
 function Chat() {
   const navigate = useNavigate()
@@ -100,10 +101,9 @@ function Chat() {
       const data = await response.json()
       const aiReply = data.reply || "I'm sorry, I couldn't understand that. Could you try again?"
       setMessages(prev => [...prev, { role: 'assistant', content: aiReply }])
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(aiReply)
-        utterance.rate = 0.9
-        window.speechSynthesis.speak(utterance)
+      const autoSpeak = localStorage.getItem('autoSpeak') !== 'false'
+      if (autoSpeak) {
+        speakWithSettings(aiReply)
       }
     } catch (err) {
       setMessages(prev => [...prev, {

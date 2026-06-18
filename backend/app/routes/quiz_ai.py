@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from groq import Groq
 import os
 import json
+import random
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY", ""))
 router = APIRouter()
@@ -26,13 +27,17 @@ async def generate_quiz(data: QuizRequest):
         weak_areas_text = f"Focus on these weak areas: {', '.join(data.weak_areas)}" if data.weak_areas else ""
         previous_wrong_text = f"Avoid these words already tested: {', '.join(data.previous_wrong)}" if data.previous_wrong else ""
 
+        random_seed = random.randint(1000, 9999)
+
         prompt = f"""You are an English vocabulary quiz generator for language learners.
 
-Generate exactly 10 vocabulary questions for:
+Generate exactly 10 DIFFERENT vocabulary questions for:
 - Level: {data.level_title} (Level {data.level}/5)
 - Student's native language: {data.native_language}
 - {weak_areas_text}
 - {previous_wrong_text}
+
+Session ID: {random_seed} — use this to pick a fresh, varied set of words different from typical/common examples for this level. Avoid always picking the most obvious "textbook" words for this level — mix in less common but still level-appropriate vocabulary.
 
 Level guidelines:
 - Level 1 (Beginner): Simple everyday words like happy, tired, busy
@@ -66,7 +71,8 @@ Make sure:
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=2000
+            max_tokens=2000,
+            temperature=1.1
         )
 
         response_text = completion.choices[0].message.content.strip()
