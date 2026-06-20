@@ -11,6 +11,8 @@ router = APIRouter()
 class GenerateChallengeRequest(BaseModel):
     native_language: str = "English"
     proficiency_level: str = "Beginner"
+    weakest_skill: str = ""
+    weakest_avg: float = 0
 
 class SubmitChallengeRequest(BaseModel):
     challenge_type: str
@@ -23,11 +25,22 @@ async def generate_challenge(data: GenerateChallengeRequest):
     try:
         today = datetime.now().strftime("%A, %B %d, %Y")
 
+        adaptive_instruction = ""
+        if data.weakest_skill:
+            adaptive_instruction = f"""
+IMPORTANT — Adaptive personalization:
+This student's performance data shows their weakest skill is "{data.weakest_skill}" with an average score of {data.weakest_avg}%.
+At least ONE of the 3 challenges today MUST specifically target and help improve "{data.weakest_skill}".
+For example, if the weak skill is Pronunciation, make the Speaking challenge focus on words/sounds that are commonly mispronounced. If it's Grammar, make the Writing challenge focus on a grammar structure they likely struggle with. If it's Vocabulary, make the Vocabulary challenge words slightly more challenging and tied to real usage.
+Briefly mention in that challenge's "tip" field that this challenge was chosen to help with their {data.weakest_skill}.
+"""
+
         prompt = f"""You are an English learning coach for newcomers to Canada.
 
 Today is {today}.
 Student's native language: {data.native_language}
 Student's level: {data.proficiency_level}
+{adaptive_instruction}
 
 Generate exactly 3 daily English challenges for today. Make them practical and useful for someone living in Canada.
 
@@ -39,6 +52,7 @@ Challenge types to include:
 Respond ONLY in this exact JSON format:
 {{
   "date": "{today}",
+  "adapted_for": "{data.weakest_skill if data.weakest_skill else ''}",
   "challenges": [
     {{
       "type": "Speaking",
@@ -76,7 +90,7 @@ Make challenges:
 - Appropriate for {data.proficiency_level} level
 - Different every day since today is {today}
 - Practical and immediately useful"""
-
+        
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
@@ -96,6 +110,7 @@ Make challenges:
         print(f"Daily challenge error: {e}")
         return {
             "date": datetime.now().strftime("%A, %B %d, %Y"),
+            "adapted_for": "",
             "challenges": [
                 {
                     "type": "Speaking",

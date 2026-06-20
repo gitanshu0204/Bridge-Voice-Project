@@ -19,36 +19,59 @@ function Profile() {
   const [totalSessions, setTotalSessions] = useState(0)
   const [overallAvgScore, setOverallAvgScore] = useState(0)
   const [recentActivity, setRecentActivity] = useState([])
+  const [fullLog, setFullLog] = useState([])
+  const [wordCount, setWordCount] = useState(0)
 
   const stats = [
     { label: 'Sessions', value: totalSessions, icon: '🎯' },
     { label: 'Day Streak', value: `🔥 ${streak}`, icon: '⚡' },
     { label: 'Total XP', value: totalXP, icon: '⭐' },
     { label: 'Avg Score', value: totalSessions > 0 ? `${overallAvgScore}%` : '—', icon: '📊' },
-    { label: 'Words', value: '124', icon: '📖' },
+    { label: 'Words', value: wordCount, icon: '📖' },
     { label: 'Badges', value: '4', icon: '🏆' },
   ]
 
+  const quizLevels = JSON.parse(localStorage.getItem('quizLevels') || '{}')
+  const allQuizLevelsPassed = [1, 2, 3, 4, 5].every(lvl => quizLevels[lvl]?.passed)
+  const interviewCount = fullLog.filter(e => e.type === 'interview').length
+  const hasHighPronunciation = fullLog.some(e => e.type === 'pronunciation' && e.score >= 90)
+  const hasFirstActivity = fullLog.length > 0
+
   const badges = [
-    { badge: '🌟', name: 'First Session', desc: 'Completed first conversation', earned: true, date: 'May 28' },
+    { badge: '🌟', name: 'First Session', desc: 'Completed your first scored activity', earned: hasFirstActivity, date: hasFirstActivity ? 'Earned' : '' },
     { badge: '🔥', name: '7 Day Streak', desc: 'Practiced 7 days in a row', earned: streak >= 7, date: streak >= 7 ? 'Earned' : '' },
-    { badge: '💬', name: '10 Chats', desc: 'Completed 10 conversations', earned: true, date: 'June 4' },
-    { badge: '🍁', name: 'Canada Ready', desc: 'Completed culture module', earned: true, date: 'June 5' },
+    { badge: '🎯', name: '10 Sessions', desc: 'Completed 10 scored activities', earned: totalSessions >= 10, date: totalSessions >= 10 ? 'Earned' : '' },
     { badge: '🏆', name: '30 Day Streak', desc: 'Practice 30 days in a row', earned: streak >= 30, date: streak >= 30 ? 'Earned' : '' },
-    { badge: '🧠', name: 'Quiz Master', desc: 'Pass all 5 quiz levels', earned: false, date: '' },
-    { badge: '💼', name: 'Interview Pro', desc: 'Complete 10 interviews', earned: false, date: '' },
-    { badge: '🎤', name: 'Pronunciation Pro', desc: 'Score 90%+ on pronunciation', earned: false, date: '' },
+    { badge: '🧠', name: 'Quiz Master', desc: 'Pass all 5 quiz levels', earned: allQuizLevelsPassed, date: allQuizLevelsPassed ? 'Earned' : '' },
+    { badge: '💼', name: 'Interview Pro', desc: 'Complete 10 interviews', earned: interviewCount >= 10, date: interviewCount >= 10 ? 'Earned' : '' },
+    { badge: '🎤', name: 'Pronunciation Pro', desc: 'Score 90%+ on pronunciation', earned: hasHighPronunciation, date: hasHighPronunciation ? 'Earned' : '' },
   ]
 
-  const weeklyProgress = [
-    { day: 'Mon', done: true },
-    { day: 'Tue', done: true },
-    { day: 'Wed', done: true },
-    { day: 'Thu', done: true },
-    { day: 'Fri', done: true },
-    { day: 'Sat', done: true },
-    { day: 'Sun', done: false },
-  ]
+  const earnedBadgeCount = badges.filter(b => b.earned).length
+
+  const getWeeklyProgress = (log) => {
+    const days = []
+    const today = new Date()
+    const currentDayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, etc.
+
+    // Calculate Monday of this week
+    const monday = new Date(today)
+    const diffToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek
+    monday.setDate(today.getDate() + diffToMonday)
+
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday)
+      d.setDate(monday.getDate() + i)
+      const dateStr = d.toISOString().split('T')[0]
+      const hasActivity = log.some(e => e.date === dateStr)
+      days.push({ day: dayLabels[i], done: hasActivity })
+    }
+    return days
+  }
+
+  const weeklyProgress = getWeeklyProgress(fullLog)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -77,7 +100,13 @@ function Profile() {
       setTotalSessions(getTotalSessions(log))
       setOverallAvgScore(getOverallAvgScore(log))
       setRecentActivity(getRecentActivity(log, 5))
+      setFullLog(log)
     })
+
+    fetch(`http://127.0.0.1:8000/api/dictionary/count?email=${encodeURIComponent(email)}`)
+      .then(res => res.json())
+      .then(data => setWordCount(data.unique_words || 0))
+      .catch(() => setWordCount(0))
   }, [])
 
   const handleImageUpload = (e) => {
@@ -320,7 +349,7 @@ function Profile() {
           {stats.map((stat, i) => (
             <div key={i} className="bg-gray-900 border border-gray-800 rounded-2xl p-4 text-center hover:border-gray-700 transition">
               <p className="text-xl mb-1">{stat.icon}</p>
-              <p className="text-lg font-bold text-white">{stat.value}</p>
+              <p className="text-lg font-bold text-white">{stat.label === 'Badges' ? earnedBadgeCount : stat.value}</p>
               <p className="text-gray-600 text-xs mt-0.5">{stat.label}</p>
             </div>
           ))}

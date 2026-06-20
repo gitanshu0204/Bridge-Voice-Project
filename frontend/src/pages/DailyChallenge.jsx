@@ -27,6 +27,7 @@ function DailyChallenge() {
   const [streak, setStreak] = useState(0)
   const [showNative, setShowNative] = useState(false)
   const [challengeDate, setChallengeDate] = useState('')
+  const [adaptedFor, setAdaptedFor] = useState('')
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -36,6 +37,7 @@ function DailyChallenge() {
       const parsed = JSON.parse(savedChallenges)
       setChallenges(parsed.challenges)
       setChallengeDate(parsed.date)
+      setAdaptedFor(parsed.adapted_for || '')
     } else {
       generateChallenges()
     }
@@ -49,17 +51,35 @@ function DailyChallenge() {
   const generateChallenges = async () => {
     setGenerating(true)
     try {
+      const email = localStorage.getItem('email')
+      let weakestSkill = ''
+      let weakestAvg = 0
+
+      try {
+        const weakRes = await fetch(`http://127.0.0.1:8000/api/weak-areas?email=${encodeURIComponent(email)}`)
+        const weakData = await weakRes.json()
+        if (weakData.has_enough_data) {
+          weakestSkill = weakData.weakest_skill
+          weakestAvg = weakData.weakest_avg
+        }
+      } catch (err) {
+        console.log('Could not fetch weak areas')
+      }
+
       const response = await fetch('http://127.0.0.1:8000/api/daily-challenge/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           native_language: nativeLanguage,
-          proficiency_level: proficiencyLevel
+          proficiency_level: proficiencyLevel,
+          weakest_skill: weakestSkill,
+          weakest_avg: weakestAvg
         })
       })
       const data = await response.json()
       setChallenges(data.challenges)
       setChallengeDate(data.date)
+      setAdaptedFor(data.adapted_for || '')
       localStorage.setItem(`challenges_${today}`, JSON.stringify(data))
     } catch (err) {
       console.log('Could not generate challenges')
@@ -268,6 +288,15 @@ function DailyChallenge() {
               <div className="flex items-center justify-between px-1">
                 <p className="text-xs text-gray-500">📅 {challengeDate}</p>
                 <p className="text-xs text-purple-400">🤖 AI Generated for {nativeLanguage}</p>
+              </div>
+            )}
+
+            {adaptedFor && (
+              <div className="bg-purple-900 bg-opacity-20 border border-purple-800 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <span className="text-lg">🎯</span>
+                <p className="text-purple-300 text-xs">
+                  <strong>AI adapted today's challenges</strong> to focus on <strong>{adaptedFor}</strong> based on your recent performance
+                </p>
               </div>
             )}
             {challenges.map((challenge, i) => {

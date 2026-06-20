@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 
@@ -8,13 +8,14 @@ function Dictionary() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [savedWords, setSavedWords] = useState([
-    { word: 'Confident', meaning: 'Feeling sure about yourself', example: 'She was confident during the interview.', partOfSpeech: 'adjective' },
-    { word: 'Fluent', meaning: 'Able to speak a language easily', example: 'He speaks fluent English.', partOfSpeech: 'adjective' },
-    { word: 'Etiquette', meaning: 'Rules of polite behavior', example: 'Workplace etiquette is important in Canada.', partOfSpeech: 'noun' },
-  ])
+  const [savedWords, setSavedWords] = useState([])
+  const [savedWordsLoading, setSavedWordsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('search')
   const [flipped, setFlipped] = useState(null)
+
+  // Word of the Day
+  const [wordOfTheDay, setWordOfTheDay] = useState(null)
+  const [wotdLoading, setWotdLoading] = useState(true)
 
   // Quiz states
   const [quizWord, setQuizWord] = useState(null)
@@ -26,19 +27,54 @@ function Dictionary() {
   const [quizLoading, setQuizLoading] = useState(false)
   const [quizExplanation, setQuizExplanation] = useState('')
 
-  const wordOfTheDay = {
-    word: 'Perseverance',
-    pronunciation: '/ˌpɜːrsɪˈvɪərəns/',
-    partOfSpeech: 'noun',
-    meaning: 'Continued effort to do something despite difficulty or failure',
-    example: 'Her perseverance helped her learn English in just 6 months.',
-    synonyms: ['persistence', 'determination', 'resilience'],
-    tip: 'Use this word in job interviews to describe your work ethic!'
-  }
-
   const trendingWords = [
     'Perseverance', 'Resilient', 'Proactive', 'Articulate', 'Ambitious'
   ]
+
+  useEffect(() => {
+    loadWordOfDay()
+    loadSavedWords()
+  }, [])
+
+  const loadWordOfDay = async () => {
+    const today = new Date().toISOString().split('T')[0]
+    const cached = localStorage.getItem(`wordOfDay_${today}`)
+
+    if (cached) {
+      setWordOfTheDay(JSON.parse(cached))
+      setWotdLoading(false)
+      return
+    }
+
+    setWotdLoading(true)
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/word-of-day/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ native_language: 'English' })
+      })
+      const data = await response.json()
+      localStorage.setItem(`wordOfDay_${today}`, JSON.stringify(data))
+      setWordOfTheDay(data)
+    } catch (err) {
+      console.log('Could not load word of the day')
+    }
+    setWotdLoading(false)
+  }
+
+  const loadSavedWords = async () => {
+    const email = localStorage.getItem('email')
+    if (!email) return
+    setSavedWordsLoading(true)
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/saved-words?email=${encodeURIComponent(email)}`)
+      const data = await response.json()
+      setSavedWords(data)
+    } catch (err) {
+      console.log('Could not load saved words')
+    }
+    setSavedWordsLoading(false)
+  }
 
   const searchDictionary = async (word = searchWord) => {
     if (!word.trim()) return
@@ -60,6 +96,15 @@ function Dictionary() {
             synonyms: m.synonyms?.slice(0, 4) || []
           }))
         })
+
+        const email = localStorage.getItem('email')
+        if (email) {
+          fetch('http://127.0.0.1:8000/api/dictionary/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_email: email, word: entry.word })
+          }).catch(() => {})
+        }
       } else {
         setError('Word not found. Try another word!')
       }
@@ -69,20 +114,77 @@ function Dictionary() {
     setLoading(false)
   }
 
-  const saveWord = () => {
+  const saveWord = async () => {
     if (!result) return
     const alreadySaved = savedWords.find(w => w.word.toLowerCase() === result.word.toLowerCase())
     if (alreadySaved) return
-    setSavedWords(prev => [...prev, {
+
+    const email = localStorage.getItem('email')
+    if (!email) return
+
+    const newWord = {
       word: result.word,
       meaning: result.meanings[0].definition,
       example: result.meanings[0].example,
       partOfSpeech: result.meanings[0].partOfSpeech
-    }])
+    }
+
+    setSavedWords(prev => [newWord, ...prev])
+
+    try {
+      await fetch('http://127.0.0.1:8000/api/saved-words', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_email: email, ...newWord })
+      })
+      loadSavedWords()
+    } catch (err) {
+      console.log('Could not save word', err)
+    }
   }
 
-  const removeWord = (word) => {
-    setSavedWords(prev => prev.filter(w => w.word !== word))
+  const removeWord = async (wordObj) => {
+    setSavedWords(prev => prev.filter(w => w.word !== wordObj.word))
+
+    const email = localStorage.getItem('email')
+    if (!email || !wordObj.id) return
+
+    try {
+      await fetch(`http://127.0.0.1:8000/api/saved-words/${wordObj.id}?email=${encodeURIComponent(email)}`, {
+        method: 'DELETE'
+      })
+    } catch (err) {
+      console.log('Could not remove word', err)
+    }
+  }
+
+  const saveWordOfDay = async () => {
+    if (!wordOfTheDay) return
+    const alreadySaved = savedWords.find(w => w.word.toLowerCase() === wordOfTheDay.word.toLowerCase())
+    if (alreadySaved) return
+
+    const email = localStorage.getItem('email')
+    if (!email) return
+
+    const newWord = {
+      word: wordOfTheDay.word,
+      meaning: wordOfTheDay.meaning,
+      example: wordOfTheDay.example,
+      partOfSpeech: wordOfTheDay.partOfSpeech
+    }
+
+    setSavedWords(prev => [newWord, ...prev])
+
+    try {
+      await fetch('http://127.0.0.1:8000/api/saved-words', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_email: email, ...newWord })
+      })
+      loadSavedWords()
+    } catch (err) {
+      console.log('Could not save word', err)
+    }
   }
 
   const speakWord = (word) => {
@@ -196,54 +298,63 @@ function Dictionary() {
           <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Word of the Day</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">🤖 AI Word of the Day</p>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => speakWord(wordOfTheDay.word)}
-                className="text-gray-600 hover:text-purple-400 transition"
-              >
-                🔊
-              </button>
-              <button
-                onClick={() => setSavedWords(prev =>
-                  prev.find(w => w.word === wordOfTheDay.word) ? prev :
-                  [...prev, { word: wordOfTheDay.word, meaning: wordOfTheDay.meaning, example: wordOfTheDay.example, partOfSpeech: wordOfTheDay.partOfSpeech }]
-                )}
-                className="text-gray-600 hover:text-yellow-400 transition"
-              >
-                ⭐
-              </button>
-            </div>
-          </div>
-          <div className="p-6">
-            <div className="relative pl-4 border-l-2 border-purple-600">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-3xl font-bold text-white">{wordOfTheDay.word}</h3>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${getPosColor(wordOfTheDay.partOfSpeech)}`}>
-                  {wordOfTheDay.partOfSpeech}
-                </span>
-              </div>
-              <p className="text-gray-400 text-sm mb-1">{wordOfTheDay.pronunciation}</p>
-              <p className="text-gray-200 mb-2">{wordOfTheDay.meaning}</p>
-              <p className="text-gray-500 text-sm italic">"{wordOfTheDay.example}"</p>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-4">
-              {wordOfTheDay.synonyms.map((syn, i) => (
+            {wordOfTheDay && !wotdLoading && (
+              <div className="flex gap-2">
                 <button
-                  key={i}
-                  onClick={() => { setSearchWord(syn); setActiveTab('search'); searchDictionary(syn) }}
-                  className="bg-gray-800 border border-gray-700 hover:border-purple-500 text-gray-400 hover:text-white px-3 py-1 rounded-full text-xs transition"
+                  onClick={() => speakWord(wordOfTheDay.word)}
+                  className="text-gray-600 hover:text-purple-400 transition"
                 >
-                  {syn}
+                  🔊
                 </button>
-              ))}
-            </div>
-            <div className="flex items-start gap-2 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 mt-4">
-              <span className="text-yellow-500 text-sm mt-0.5">💡</span>
-              <p className="text-gray-400 text-sm">{wordOfTheDay.tip}</p>
-            </div>
+                <button
+                  onClick={saveWordOfDay}
+                  className="text-gray-600 hover:text-yellow-400 transition"
+                >
+                  ⭐
+                </button>
+              </div>
+            )}
           </div>
+
+          {wotdLoading ? (
+            <div className="p-12 flex flex-col items-center justify-center gap-3">
+              <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-gray-500 text-sm">AI is picking today's word...</p>
+            </div>
+          ) : wordOfTheDay ? (
+            <div className="p-6">
+              <div className="relative pl-4 border-l-2 border-purple-600">
+                <div className="flex items-center gap-3 mb-2">
+                  <h3 className="text-3xl font-bold text-white">{wordOfTheDay.word}</h3>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${getPosColor(wordOfTheDay.partOfSpeech)}`}>
+                    {wordOfTheDay.partOfSpeech}
+                  </span>
+                </div>
+                <p className="text-gray-400 text-sm mb-1">{wordOfTheDay.pronunciation}</p>
+                <p className="text-gray-200 mb-2">{wordOfTheDay.meaning}</p>
+                <p className="text-gray-500 text-sm italic">"{wordOfTheDay.example}"</p>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {wordOfTheDay.synonyms?.map((syn, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setSearchWord(syn); setActiveTab('search'); searchDictionary(syn) }}
+                    className="bg-gray-800 border border-gray-700 hover:border-purple-500 text-gray-400 hover:text-white px-3 py-1 rounded-full text-xs transition"
+                  >
+                    {syn}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-start gap-2 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 mt-4">
+                <span className="text-yellow-500 text-sm mt-0.5">💡</span>
+                <p className="text-gray-400 text-sm">{wordOfTheDay.tip}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-gray-500 text-sm">Could not load word of the day</div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -397,7 +508,11 @@ function Dictionary() {
         {/* SAVED TAB */}
         {activeTab === 'saved' && (
           <div>
-            {savedWords.length === 0 ? (
+            {savedWordsLoading ? (
+              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 flex justify-center">
+                <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : savedWords.length === 0 ? (
               <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12 text-center">
                 <p className="text-5xl mb-4 opacity-20">⭐</p>
                 <p className="text-gray-400 font-medium mb-1">No saved words yet</p>
@@ -407,7 +522,7 @@ function Dictionary() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {savedWords.map((word, i) => (
                   <div
-                    key={i}
+                    key={word.id || i}
                     onClick={() => setFlipped(flipped === i ? null : i)}
                     className="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-2xl p-5 cursor-pointer transition group"
                   >
@@ -428,7 +543,7 @@ function Dictionary() {
                               🔊
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); removeWord(word.word) }}
+                              onClick={(e) => { e.stopPropagation(); removeWord(word) }}
                               className="text-gray-700 hover:text-red-400 transition"
                             >
                               ✕

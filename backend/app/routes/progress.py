@@ -5,6 +5,8 @@ from app.models import UserProgress, ActivityLog
 from app.schemas import ActivityLogCreate, AddXPRequest
 from datetime import datetime, timedelta
 from app.models import User
+from app.models import DictionarySearch
+from app.models import SavedWord
 
 router = APIRouter()
 
@@ -104,3 +106,133 @@ def get_leaderboard(email: str = None, db: Session = Depends(get_db)):
         })
 
     return leaderboard
+
+@router.post("/dictionary/log")
+def log_dictionary_search(data: dict, db: Session = Depends(get_db)):
+    user_email = data.get("user_email")
+    word = data.get("word", "").strip().lower()
+
+    if not user_email or not word:
+        raise HTTPException(status_code=400, detail="Missing user_email or word")
+
+    entry = DictionarySearch(
+        user_email=user_email,
+        word=word,
+        date=datetime.now().strftime("%Y-%m-%d")
+    )
+    db.add(entry)
+    db.commit()
+    return {"success": True}
+
+@router.get("/dictionary/count")
+def get_dictionary_word_count(email: str, db: Session = Depends(get_db)):
+    distinct_words = db.query(DictionarySearch.word).filter(
+        DictionarySearch.user_email == email
+    ).distinct().count()
+    return {"unique_words": distinct_words}
+
+@router.get("/saved-words")
+def get_saved_words(email: str, db: Session = Depends(get_db)):
+    words = db.query(SavedWord).filter(
+        SavedWord.user_email == email
+    ).order_by(SavedWord.id.desc()).all()
+
+    return [
+        {
+            "id": w.id,
+            "word": w.word,
+            "meaning": w.meaning,
+            "example": w.example,
+            "partOfSpeech": w.part_of_speech
+        }
+        for w in words
+    ]
+
+@router.post("/saved-words")
+def save_word(data: dict, db: Session = Depends(get_db)):
+    user_email = data.get("user_email")
+    word = data.get("word", "").strip()
+
+    if not user_email or not word:
+        raise HTTPException(status_code=400, detail="Missing user_email or word")
+
+    existing = db.query(SavedWord).filter(
+        SavedWord.user_email == user_email,
+        SavedWord.word.ilike(word)
+    ).first()
+    if existing:
+        return {"success": True, "already_saved": True}
+
+    entry = SavedWord(
+        user_email=user_email,
+        word=word,
+        meaning=data.get("meaning", ""),
+        example=data.get("example", ""),
+        part_of_speech=data.get("partOfSpeech", "")
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return {"success": True, "id": entry.id}
+
+@router.delete("/saved-words/{word_id}")
+def delete_saved_word(word_id: int, email: str, db: Session = Depends(get_db)):
+    entry = db.query(SavedWord).filter(
+        SavedWord.id == word_id,
+        SavedWord.user_email == email
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Word not found")
+    db.delete(entry)
+    db.commit()
+    return {"success": True}
+
+@router.get("/weak-areas")
+def get_weak_areas(email: str, db: Session = Depends(get_db)):
+    entries = db.query(ActivityLog).filter(ActivityLog.user_email == email).all()
+
+    if len(entries) < 3:
+        return {
+            "has_enough_data": False,
+            "weakest_skill": None,
+            "weakest_avg": None,
+            "overall_avg": None
+        }
+
+    skill_scores = {}
+    for e in entries:
+        skill_scores.setdefault(e.type, []).append(e.score)
+
+    skill_averages = {
+        skill: round(sum(scores) / len(scores), 1)
+        for skill, scores in skill_scores.items()
+        if len(scores) >= 2  # only consider skills with at least 2 attempts
+    }
+
+    overall_avg = round(sum(e.score for e in entries) / len(entries), 1)
+
+    if not skill_averages:
+        return {
+            "has_enough_data": False,
+            "weakest_skill": None,
+            "weakest_avg": None,
+            "overall_avg": overall_avg
+        }
+
+    weakest_skill = min(skill_averages, key=skill_averages.get)
+
+    skill_labels = {
+        "grammar": "Grammar",
+        "pronunciation": "Pronunciation",
+        "quiz": "Vocabulary",
+        "interview": "Interview Skills",
+        "translation": "Translation",
+        "daily_challenge": "Daily Practice"
+    }
+
+    return {
+        "has_enough_data": True,
+        "weakest_skill": skill_labels.get(weakest_skill, weakest_skill),
+        "weakest_avg": skill_averages[weakest_skill],
+        "overall_avg": overall_avg
+    }

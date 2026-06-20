@@ -14,16 +14,35 @@ function Dashboard() {
   const [avgScore, setAvgScore] = useState(0)
   const [recentSessions, setRecentSessions] = useState([])
 
-  const tips = [
-    'Practice speaking out loud every day, even if just for 5 minutes. Consistency beats duration!',
-    'When you learn a new word, use it in 3 sentences immediately to remember it better.',
-    'Canadians say "sorry" constantly — even when it\'s not their fault. Embrace it!',
-    'Watch Canadian TV shows with subtitles to improve listening skills naturally.',
-    'Don\'t be afraid to ask someone to repeat themselves — it\'s completely normal!',
-    'A "double double" at Tim Hortons means 2 creams and 2 sugars — now you know!',
-  ]
+  const [todayTip, setTodayTip] = useState('')
+  const [tipLoading, setTipLoading] = useState(true)
 
-  const todayTip = tips[new Date().getDay() % tips.length]
+  const loadDailyTip = async () => {
+    const today = new Date().toISOString().split('T')[0]
+    const cached = localStorage.getItem(`dailyTip_${today}`)
+
+    if (cached) {
+      setTodayTip(JSON.parse(cached).tip)
+      setTipLoading(false)
+      return
+    }
+
+    setTipLoading(true)
+    try {
+      const proficiencyLevel = localStorage.getItem('proficiencyLevel') || 'Beginner'
+      const response = await fetch('http://127.0.0.1:8000/api/daily-tip/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proficiency_level: proficiencyLevel })
+      })
+      const data = await response.json()
+      localStorage.setItem(`dailyTip_${today}`, JSON.stringify(data))
+      setTodayTip(data.tip)
+    } catch (err) {
+      setTodayTip('Practice speaking out loud every day, even if just for 5 minutes. Consistency beats duration!')
+    }
+    setTipLoading(false)
+  }
 
   useEffect(() => {
     const hour = new Date().getHours()
@@ -49,6 +68,8 @@ function Dashboard() {
       setAvgScore(getOverallAvgScore(log))
       setRecentSessions(getRecentActivity(log, 3))
     })
+
+    loadDailyTip()
   }, [])
 
   const firstName = user?.full_name?.split(' ')[0] || 'User'
@@ -246,12 +267,19 @@ function Dashboard() {
             <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-800 flex items-center gap-2">
                 <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
-                <p className="font-bold text-white text-sm">Tip of the Day</p>
+                <p className="font-bold text-white text-sm">🤖 AI Tip of the Day</p>
               </div>
               <div className="p-5">
-                <div className="relative pl-3 border-l-2 border-purple-600">
-                  <p className="text-gray-400 text-xs leading-relaxed">"{todayTip}"</p>
-                </div>
+                {tipLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-gray-500 text-xs">Generating today's tip...</span>
+                  </div>
+                ) : (
+                  <div className="relative pl-3 border-l-2 border-purple-600">
+                    <p className="text-gray-400 text-xs leading-relaxed">"{todayTip}"</p>
+                  </div>
+                )}
                 <div className="mt-4 space-y-1.5">
                   {[
                     { icon: '🎯', text: 'Complete your daily challenge', path: '/daily' },

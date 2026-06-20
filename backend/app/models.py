@@ -52,3 +52,23 @@ class Post(Base):
     content = Column(Text, nullable=False)
     likes = Column(Integer, default=0)
     created_at = Column(DateTime, server_default=func.now())
+    
+class DictionarySearch(Base):
+    __tablename__ = "dictionary_searches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_email = Column(String, index=True, nullable=False)
+    word = Column(String, nullable=False)
+    date = Column(String, nullable=False)  # YYYY-MM-DD
+    created_at = Column(DateTime, server_default=func.now())
+
+class SavedWord(Base):
+    __tablename__ = "saved_words"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_email = Column(String, index=True, nullable=False)
+    word = Column(String, nullable=False)
+    meaning = Column(Text, nullable=True)
+    example = Column(Text, nullable=True)
+    part_of_speech = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
