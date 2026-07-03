@@ -22,6 +22,51 @@ function Profile() {
   const [fullLog, setFullLog] = useState([])
   const [wordCount, setWordCount] = useState(0)
 
+  // Avatar Theme states
+  const [showAvatarModal, setShowAvatarModal] = useState(false)
+  const [selectedTheme, setSelectedTheme] = useState(null)
+  const [aiRecommendedTheme, setAiRecommendedTheme] = useState(null)
+  const [avatarInitial, setAvatarInitial] = useState('G')
+
+  // 12 Beautiful gradient themes
+  const gradientThemes = [
+    { id: 'purple-blue', name: 'Ocean Purple', gradient: 'from-purple-600 to-blue-600', colors: ['#7c3aed', '#2563eb'] },
+    { id: 'pink-purple', name: 'Sunset Rose', gradient: 'from-pink-500 to-purple-600', colors: ['#ec4899', '#7c3aed'] },
+    { id: 'blue-cyan', name: 'Sky Blue', gradient: 'from-blue-500 to-cyan-500', colors: ['#3b82f6', '#06b6d4'] },
+    { id: 'green-teal', name: 'Forest Teal', gradient: 'from-green-500 to-teal-500', colors: ['#22c55e', '#14b8a6'] },
+    { id: 'orange-red', name: 'Sunset Fire', gradient: 'from-orange-500 to-red-500', colors: ['#f97316', '#ef4444'] },
+    { id: 'yellow-orange', name: 'Golden Sun', gradient: 'from-yellow-400 to-orange-500', colors: ['#facc15', '#f97316'] },
+    { id: 'teal-blue', name: 'Arctic Ice', gradient: 'from-teal-400 to-blue-500', colors: ['#2dd4bf', '#3b82f6'] },
+    { id: 'red-pink', name: 'Rose Red', gradient: 'from-red-500 to-pink-500', colors: ['#ef4444', '#ec4899'] },
+    { id: 'indigo-purple', name: 'Deep Space', gradient: 'from-indigo-600 to-purple-600', colors: ['#4f46e5', '#9333ea'] },
+    { id: 'green-blue', name: 'Emerald Sea', gradient: 'from-emerald-500 to-blue-500', colors: ['#10b981', '#3b82f6'] },
+    { id: 'purple-pink', name: 'Cotton Candy', gradient: 'from-purple-400 to-pink-400', colors: ['#c084fc', '#f472b6'] },
+    { id: 'cyan-green', name: 'Mint Fresh', gradient: 'from-cyan-500 to-green-500', colors: ['#06b6d4', '#22c55e'] },
+  ]
+
+  // AI recommendation logic based on user profile
+  const getAIRecommendedTheme = (userData) => {
+    if (!userData) return gradientThemes[0]
+
+    const level = userData.proficiency_level?.toLowerCase() || 'beginner'
+    const lang = userData.language_background?.toLowerCase() || ''
+    const goals = userData.goals?.toLowerCase() || ''
+
+    // AI recommendation rules based on profile
+    if (level === 'advanced' || level === 'master') return gradientThemes[8] // Deep Space — advanced learners
+    if (level === 'intermediate') return gradientThemes[2] // Sky Blue — growing confidence
+    if (lang.includes('hindi') || lang.includes('punjabi')) return gradientThemes[4] // Sunset Fire — warm tones
+    if (lang.includes('mandarin') || lang.includes('chinese')) return gradientThemes[3] // Forest Teal
+    if (lang.includes('arabic')) return gradientThemes[9] // Emerald Sea
+    if (lang.includes('spanish') || lang.includes('portuguese')) return gradientThemes[5] // Golden Sun
+    if (lang.includes('french')) return gradientThemes[10] // Cotton Candy
+    if (goals.includes('job') || goals.includes('work') || goals.includes('career')) return gradientThemes[0] // Ocean Purple — professional
+    if (goals.includes('friend') || goals.includes('social')) return gradientThemes[11] // Mint Fresh — social
+    if (goals.includes('school') || goals.includes('study')) return gradientThemes[2] // Sky Blue — academic
+
+    return gradientThemes[0] // Default Ocean Purple
+  }
+
   const stats = [
     { label: 'Sessions', value: totalSessions, icon: '🎯' },
     { label: 'Day Streak', value: `🔥 ${streak}`, icon: '⚡' },
@@ -52,15 +97,11 @@ function Profile() {
   const getWeeklyProgress = (log) => {
     const days = []
     const today = new Date()
-    const currentDayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, etc.
-
-    // Calculate Monday of this week
+    const currentDayOfWeek = today.getDay()
     const monday = new Date(today)
     const diffToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek
     monday.setDate(today.getDate() + diffToMonday)
-
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday)
       d.setDate(monday.getDate() + i)
@@ -76,18 +117,28 @@ function Profile() {
   useEffect(() => {
     const token = localStorage.getItem('token')
     const email = localStorage.getItem('email')
-    if (!token) {
-      navigate('/login')
-      return
-    }
+    if (!token) { navigate('/login'); return }
+
     fetch(`http://127.0.0.1:8000/api/users/profile?email=${email}`)
       .then(res => res.json())
       .then(data => {
         setUser(data)
         setEditData(data)
-        if (data.profile_picture) {
+        setAvatarInitial(data.full_name?.charAt(0).toUpperCase() || 'U')
+
+        // Check if user has a saved theme (stored as theme ID in profile_picture starting with 'theme:')
+        if (data.profile_picture?.startsWith('theme:')) {
+          const themeId = data.profile_picture.replace('theme:', '')
+          const theme = gradientThemes.find(t => t.id === themeId)
+          if (theme) setProfilePic(data.profile_picture)
+        } else if (data.profile_picture) {
           setProfilePic(data.profile_picture)
         }
+
+        // AI recommendation based on profile
+        const recommended = getAIRecommendedTheme(data)
+        setAiRecommendedTheme(recommended)
+        setSelectedTheme(recommended)
       })
       .catch(err => console.log(err))
 
@@ -109,18 +160,44 @@ function Profile() {
       .catch(() => setWordCount(0))
   }, [])
 
+  // Get current avatar gradient for display
+  const getCurrentTheme = () => {
+    if (profilePic?.startsWith('theme:')) {
+      const themeId = profilePic.replace('theme:', '')
+      return gradientThemes.find(t => t.id === themeId) || gradientThemes[0]
+    }
+    return null
+  }
+
+  const currentTheme = getCurrentTheme()
+
+  const saveAvatarTheme = async () => {
+    if (!selectedTheme) return
+    const email = localStorage.getItem('email')
+    const themeValue = `theme:${selectedTheme.id}`
+    try {
+      await fetch(`http://127.0.0.1:8000/api/users/profile?email=${encodeURIComponent(email)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_picture: themeValue })
+      })
+      setProfilePic(themeValue)
+      setShowAvatarModal(false)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err) {
+      console.log('Could not save avatar theme', err)
+    }
+  }
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be smaller than 5MB!')
-      return
-    }
+    if (file.size > 5 * 1024 * 1024) { alert('Image must be smaller than 5MB!'); return }
     const reader = new FileReader()
     reader.onloadend = async () => {
       const base64 = reader.result
       setProfilePic(base64)
-
       const email = localStorage.getItem('email')
       try {
         await fetch(`http://127.0.0.1:8000/api/users/profile?email=${encodeURIComponent(email)}`, {
@@ -128,9 +205,7 @@ function Profile() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ profile_picture: base64 })
         })
-      } catch (err) {
-        console.log('Could not save profile picture', err)
-      }
+      } catch (err) { console.log('Could not save profile picture', err) }
     }
     reader.readAsDataURL(file)
   }
@@ -144,7 +219,6 @@ function Profile() {
 
   const removePhoto = async () => {
     setProfilePic(null)
-
     const email = localStorage.getItem('email')
     try {
       await fetch(`http://127.0.0.1:8000/api/users/profile?email=${encodeURIComponent(email)}`, {
@@ -152,9 +226,7 @@ function Profile() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile_picture: '' })
       })
-    } catch (err) {
-      console.log('Could not remove profile picture', err)
-    }
+    } catch (err) { console.log('Could not remove profile picture', err) }
   }
 
   const getLevel = (xp) => {
@@ -168,6 +240,22 @@ function Profile() {
   const userLevel = getLevel(totalXP)
   const nextLevelXP = userLevel.level >= 10 ? 1000 : [100, 200, 300, 500, 700, 1000][userLevel.level - 1]
   const xpProgress = Math.min((totalXP / nextLevelXP) * 100, 100)
+
+  // Render avatar — either real photo, theme gradient, or default gradient
+  const renderAvatar = (size = 'w-24 h-24', textSize = 'text-3xl') => {
+    if (profilePic && !profilePic.startsWith('theme:')) {
+      return <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
+    }
+    const theme = currentTheme || gradientThemes[0]
+    return (
+      <div
+        className={`w-full h-full flex items-center justify-center ${textSize} font-black text-white`}
+        style={{ background: `linear-gradient(135deg, ${theme.colors[0]}, ${theme.colors[1]})` }}
+      >
+        {avatarInitial}
+      </div>
+    )
+  }
 
   if (!user) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -225,13 +313,7 @@ function Profile() {
             {/* Avatar */}
             <div className="relative flex-shrink-0">
               <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-purple-700 shadow-xl shadow-purple-900/30">
-                {profilePic ? (
-                  <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-3xl font-bold text-white">
-                    {user.full_name?.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                {renderAvatar()}
               </div>
               <button
                 onClick={() => fileInputRef.current.click()}
@@ -261,12 +343,8 @@ function Profile() {
                     placeholder="Your Goal"
                   />
                   <div className="flex gap-2">
-                    <button onClick={handleSave} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition">
-                      Save
-                    </button>
-                    <button onClick={() => setEditing(false)} className="border border-gray-700 text-gray-400 hover:text-white px-4 py-2 rounded-xl text-sm transition">
-                      Cancel
-                    </button>
+                    <button onClick={handleSave} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition">Save</button>
+                    <button onClick={() => setEditing(false)} className="border border-gray-700 text-gray-400 hover:text-white px-4 py-2 rounded-xl text-sm transition">Cancel</button>
                   </div>
                 </div>
               ) : (
@@ -284,12 +362,21 @@ function Profile() {
                       🌍 {user.language_background || 'Not set'}
                     </span>
                   </div>
-                  <div className="flex gap-2 justify-center md:justify-start">
+                  <div className="flex flex-wrap gap-2 justify-center md:justify-start">
                     <button
                       onClick={() => setEditing(true)}
                       className="border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-4 py-2 rounded-xl text-xs font-medium transition"
                     >
                       ✏️ Edit Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAvatarModal(true)
+                        setSelectedTheme(aiRecommendedTheme || gradientThemes[0])
+                      }}
+                      className="border border-purple-700 hover:border-purple-500 text-purple-400 hover:text-purple-300 px-4 py-2 rounded-xl text-xs font-medium transition"
+                    >
+                      🎨 Customize Avatar
                     </button>
                     {profilePic && (
                       <button
@@ -331,9 +418,7 @@ function Profile() {
               {weeklyProgress.map((day, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
                   <div className={`w-full h-8 rounded-lg flex items-center justify-center text-xs transition ${
-                    day.done
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-800 border border-gray-700 text-gray-600'
+                    day.done ? 'bg-purple-600 text-white' : 'bg-gray-800 border border-gray-700 text-gray-600'
                   }`}>
                     {day.done ? '✓' : '·'}
                   </div>
@@ -378,8 +463,6 @@ function Profile() {
 
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* Learning Info */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-800">
                 <p className="font-bold text-white text-sm">📚 Learning Profile</p>
@@ -402,15 +485,11 @@ function Profile() {
               </div>
             </div>
 
-            {/* Recent Activity Preview */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-800 flex justify-between items-center">
                 <p className="font-bold text-white text-sm">📅 Recent Activity</p>
                 {recentActivity.length > 0 && (
-                  <button
-                    onClick={() => setActiveTab('activity')}
-                    className="text-purple-400 hover:text-purple-300 text-xs transition"
-                  >
+                  <button onClick={() => setActiveTab('activity')} className="text-purple-400 hover:text-purple-300 text-xs transition">
                     View all →
                   </button>
                 )}
@@ -449,9 +528,7 @@ function Profile() {
               <div
                 key={i}
                 className={`bg-gray-900 border rounded-2xl p-5 text-center transition hover:scale-105 ${
-                  item.earned
-                    ? 'border-gray-700 hover:border-purple-700'
-                    : 'border-gray-800 opacity-50'
+                  item.earned ? 'border-gray-700 hover:border-purple-700' : 'border-gray-800 opacity-50'
                 }`}
               >
                 <p className={`text-4xl mb-3 ${!item.earned && 'grayscale'}`}>{item.badge}</p>
@@ -501,6 +578,114 @@ function Profile() {
         )}
 
       </div>
+
+      {/* ===== AVATAR THEME MODAL ===== */}
+      {showAvatarModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
+          <div className="relative max-w-lg w-full">
+            <div className="absolute inset-0 bg-purple-900 rounded-2xl blur-xl opacity-10"></div>
+            <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl">
+
+              {/* Modal Header */}
+              <div className="flex justify-between items-center mb-2">
+                <div>
+                  <h3 className="text-lg font-bold text-white">🎨 Customize Your Avatar</h3>
+                  <p className="text-gray-500 text-xs mt-0.5">Pick a gradient theme for your profile</p>
+                </div>
+                <button
+                  onClick={() => setShowAvatarModal(false)}
+                  className="text-gray-500 hover:text-white transition text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* AI Recommendation Banner */}
+              {aiRecommendedTheme && (
+                <div className="bg-purple-900 bg-opacity-20 border border-purple-800 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+                  <span className="text-lg">🤖</span>
+                  <div>
+                    <p className="text-purple-300 text-xs font-semibold">AI Recommended for you</p>
+                    <p className="text-gray-400 text-xs mt-0.5">
+                      Based on your profile — <strong className="text-purple-300">{aiRecommendedTheme.name}</strong> matches your learning personality
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Preview */}
+              {selectedTheme && (
+                <div className="flex items-center gap-4 bg-gray-800 border border-gray-700 rounded-2xl px-4 py-4 mb-5">
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black text-white shadow-lg flex-shrink-0"
+                    style={{ background: `linear-gradient(135deg, ${selectedTheme.colors[0]}, ${selectedTheme.colors[1]})` }}
+                  >
+                    {avatarInitial}
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-sm">{selectedTheme.name}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">This is how your avatar will look</p>
+                    {selectedTheme.id === aiRecommendedTheme?.id && (
+                      <span className="text-xs text-purple-400 font-medium">⭐ AI Recommended</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 12 Theme Grid */}
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Choose Your Theme</p>
+              <div className="grid grid-cols-6 gap-2 mb-5">
+                {gradientThemes.map(theme => (
+                  <button
+                    key={theme.id}
+                    onClick={() => setSelectedTheme(theme)}
+                    className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl border transition ${
+                      selectedTheme?.id === theme.id
+                        ? 'border-white scale-105'
+                        : 'border-gray-700 hover:border-gray-500'
+                    }`}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-xl shadow-md"
+                      style={{ background: `linear-gradient(135deg, ${theme.colors[0]}, ${theme.colors[1]})` }}
+                    ></div>
+                    <span className="text-xs text-gray-400 leading-tight text-center" style={{ fontSize: '9px' }}>
+                      {theme.name.split(' ')[0]}
+                    </span>
+                    {theme.id === aiRecommendedTheme?.id && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
+                        <span style={{ fontSize: '8px' }}>🤖</span>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setSelectedTheme(aiRecommendedTheme)}
+                  className="flex-1 border border-purple-700 text-purple-400 hover:bg-purple-900 hover:bg-opacity-20 py-2.5 rounded-xl text-sm font-medium transition"
+                >
+                  🤖 Use AI Pick
+                </button>
+                <button
+                  onClick={saveAvatarTheme}
+                  className="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl text-sm font-bold transition"
+                >
+                  ✅ Save Theme
+                </button>
+              </div>
+
+              <p className="text-gray-600 text-xs text-center mt-3">
+                Or upload a real photo using the 📷 button on your profile
+              </p>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   )
 }
