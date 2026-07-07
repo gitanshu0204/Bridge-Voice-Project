@@ -72,3 +72,21 @@ class SavedWord(Base):
     example = Column(Text, nullable=True)
     part_of_speech = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+
+class ConnectionRequest(Base):
+    __tablename__ = "connection_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    from_email = Column(String, nullable=False, index=True)
+    to_email = Column(String, nullable=False, index=True)
+    status = Column(String, default="pending")  # pending, accepted, rejected
+    created_at = Column(DateTime, server_default=func.now())
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    from_email = Column(String, nullable=False, index=True)
+    to_email = Column(String, nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())

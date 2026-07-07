@@ -21,6 +21,7 @@ import DailyChallenge from './pages/DailyChallenge'
 import Pricing from './pages/Pricing'
 import NotFound from './pages/NotFound'
 import ScrollToTop from './components/ScrollToTop'
+import StudyBuddyChat from './pages/StudyBuddyChat'
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
         <Route path="/daily" element={<DailyChallenge />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="*" element={<NotFound />} />
+        <Route path="/chat/buddy" element={<StudyBuddyChat />} />
       </Routes>
     </Router>
   )

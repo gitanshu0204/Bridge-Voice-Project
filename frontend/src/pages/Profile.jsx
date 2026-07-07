@@ -182,6 +182,7 @@ function Profile() {
         body: JSON.stringify({ profile_picture: themeValue })
       })
       setProfilePic(themeValue)
+      localStorage.setItem('userProfilePic', themeValue) // ← sync to localStorage
       setShowAvatarModal(false)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
@@ -198,6 +199,7 @@ function Profile() {
     reader.onloadend = async () => {
       const base64 = reader.result
       setProfilePic(base64)
+      localStorage.setItem('userProfilePic', base64) // ← add this line
       const email = localStorage.getItem('email')
       try {
         await fetch(`http://127.0.0.1:8000/api/users/profile?email=${encodeURIComponent(email)}`, {

@@ -15,13 +15,32 @@ function Layout({ children }) {
   useEffect(() => {
     const email = localStorage.getItem('email')
     if (!email) return
+
+    // Load from localStorage first for instant display
+    const cachedPic = localStorage.getItem('userProfilePic')
+    if (cachedPic) setUserPic(cachedPic)
+
     fetch(`http://127.0.0.1:8000/api/users/profile?email=${email}`)
       .then(res => res.json())
       .then(data => {
         setUserName(data.full_name || '')
-        setUserPic(data.profile_picture || null)
+        const pic = data.profile_picture || null
+        setUserPic(pic)
+        if (pic) {
+          localStorage.setItem('userProfilePic', pic)
+        } else {
+          localStorage.removeItem('userProfilePic')
+        }
       })
       .catch(() => setUserName(''))
+
+    // Listen for avatar updates via custom event instead of polling
+    const handleAvatarUpdate = () => {
+      const newPic = localStorage.getItem('userProfilePic')
+      setUserPic(newPic || null)
+    }
+    window.addEventListener('avatarUpdated', handleAvatarUpdate)
+    return () => window.removeEventListener('avatarUpdated', handleAvatarUpdate)
   }, [])
 
   useEffect(() => {
@@ -39,6 +58,7 @@ function Layout({ children }) {
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('email')
+    localStorage.removeItem('userProfilePic')
     navigate('/')
   }
 
@@ -73,6 +93,30 @@ function Layout({ children }) {
 
   const isActive = (path) => location.pathname === path
 
+  const themeColors = {
+    'purple-blue': ['#7c3aed', '#2563eb'],
+    'pink-purple': ['#ec4899', '#7c3aed'],
+    'blue-cyan': ['#3b82f6', '#06b6d4'],
+    'green-teal': ['#22c55e', '#14b8a6'],
+    'orange-red': ['#f97316', '#ef4444'],
+    'yellow-orange': ['#facc15', '#f97316'],
+    'teal-blue': ['#2dd4bf', '#3b82f6'],
+    'red-pink': ['#ef4444', '#ec4899'],
+    'indigo-purple': ['#4f46e5', '#9333ea'],
+    'green-blue': ['#10b981', '#3b82f6'],
+    'purple-pink': ['#c084fc', '#f472b6'],
+    'cyan-green': ['#06b6d4', '#22c55e'],
+  }
+
+  const getAvatarStyle = () => {
+    if (userPic?.startsWith('theme:')) {
+      const id = userPic.replace('theme:', '')
+      const colors = themeColors[id] || ['#7c3aed', '#2563eb']
+      return { background: `linear-gradient(135deg, ${colors[0]}, ${colors[1]})` }
+    }
+    return { background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 text-white flex">
 
@@ -101,7 +145,11 @@ function Layout({ children }) {
         </div>
 
         {/* Nav Items */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <nav
+          className="flex-1 overflow-y-auto py-4 px-2"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
           {navItems.map((section, si) => (
             <div key={si} className="mb-4">
               {!collapsed && (
@@ -170,12 +218,13 @@ function Layout({ children }) {
           <div className="flex items-center gap-3 ml-auto relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-sm font-bold hover:opacity-80 transition"
+              className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold hover:opacity-80 transition"
+              style={getAvatarStyle()}
             >
-              {userPic ? (
+              {userPic && !userPic.startsWith('theme:') ? (
                 <img src={userPic} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                initial
+                <span className="text-white">{initial}</span>
               )}
             </button>
 

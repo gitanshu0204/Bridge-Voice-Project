@@ -1,14 +1,123 @@
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Logo from '../assets/logo'
+
+function AnimatedBackground() {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    let animationId
+
+    const resize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    resize()
+    window.addEventListener('resize', resize)
+
+    const particles = Array.from({ length: 40 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      radius: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.5 + 0.1,
+    }))
+
+    let gradientAngle = 0
+
+    const draw = () => {
+      gradientAngle += 0.003
+      const x1 = canvas.width / 2 + Math.cos(gradientAngle) * canvas.width * 0.4
+      const y1 = canvas.height / 2 + Math.sin(gradientAngle) * canvas.height * 0.4
+      const x2 = canvas.width / 2 + Math.cos(gradientAngle + Math.PI) * canvas.width * 0.4
+      const y2 = canvas.height / 2 + Math.sin(gradientAngle + Math.PI) * canvas.height * 0.4
+
+      const gradient = ctx.createLinearGradient(x1, y1, x2, y2)
+      gradient.addColorStop(0, '#0f0720')
+      gradient.addColorStop(0.3, '#1a0a2e')
+      gradient.addColorStop(0.6, '#0d1117')
+      gradient.addColorStop(1, '#0a1628')
+
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      const blobs = [
+        { x: canvas.width * 0.15, y: canvas.height * 0.25, color: 'rgba(147, 51, 234, 0.10)' },
+        { x: canvas.width * 0.85, y: canvas.height * 0.75, color: 'rgba(59, 130, 246, 0.10)' },
+        { x: canvas.width * 0.5, y: canvas.height * 0.5, color: 'rgba(139, 92, 246, 0.06)' },
+        { x: canvas.width * 0.3, y: canvas.height * 0.8, color: 'rgba(99, 102, 241, 0.07)' },
+      ]
+
+      blobs.forEach(blob => {
+        const blobGrad = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, 350)
+        blobGrad.addColorStop(0, blob.color)
+        blobGrad.addColorStop(1, 'transparent')
+        ctx.fillStyle = blobGrad
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+      })
+
+      particles.forEach(p => {
+        p.x += p.vx
+        p.y += p.vy
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1
+
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(167, 139, 250, ${p.opacity})`
+        ctx.fill()
+      })
+
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x
+          const dy = particles[i].y - particles[j].y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist < 80) {
+            ctx.beginPath()
+            ctx.moveTo(particles[i].x, particles[i].y)
+            ctx.lineTo(particles[j].x, particles[j].y)
+            ctx.strokeStyle = `rgba(139, 92, 246, ${0.18 * (1 - dist / 130)})`
+            ctx.lineWidth = 0.5
+            ctx.stroke()
+          }
+        }
+      }
+
+      animationId = requestAnimationFrame(draw)
+    }
+
+    draw()
+
+    return () => {
+      cancelAnimationFrame(animationId)
+      window.removeEventListener('resize', resize)
+    }
+  }, [])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 z-0"
+      style={{ pointerEvents: 'none' }}
+    />
+  )
+}
 
 function Home() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen text-white relative overflow-hidden">
+
+      {/* Animated Background */}
+      <AnimatedBackground />
 
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-950 bg-opacity-80 backdrop-blur-md border-b border-gray-800 px-8 py-4 flex justify-between items-center">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-950 bg-opacity-60 backdrop-blur-md border-b border-gray-800 border-opacity-60 px-8 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Logo size={20} />
           <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">BridgeVoice</h1>
@@ -30,20 +139,16 @@ function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900 via-gray-950 to-gray-950 opacity-50"></div>
-        <div className="absolute top-20 left-1/4 w-72 h-72 bg-purple-700 rounded-full filter blur-3xl opacity-20"></div>
-        <div className="absolute top-20 right-1/4 w-72 h-72 bg-blue-700 rounded-full filter blur-3xl opacity-20"></div>
-
+      <section className="pt-32 pb-20 px-6 text-center relative z-10">
         <div className="relative max-w-4xl mx-auto">
 
           {/* Animated Logo */}
           <div className="flex justify-center mb-8">
-            <svg width="320" height="120" viewBox="0 0 680 300" role="img">
+            <svg width="520" height="180" viewBox="0 0 680 300" role="img">
               <defs>
                 <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" style={{stopColor:'#9333ea'}}/>
-                  <stop offset="100%" style={{stopColor:'#3b82f6'}}/>
+                  <stop offset="0%" style={{ stopColor: '#9333ea' }} />
+                  <stop offset="100%" style={{ stopColor: '#3b82f6' }} />
                 </linearGradient>
                 <style>{`
                   @keyframes growUp {
@@ -81,25 +186,24 @@ function Home() {
                 `}</style>
               </defs>
 
-              <rect className="land l1" x="170" y="148" width="50" height="12" rx="6" fill="url(#g1)"/>
-              <rect className="land l2" x="460" y="148" width="50" height="12" rx="6" fill="url(#g1)"/>
-
-              <rect className="bar b1" x="228" y="138" width="14" height="22" rx="4" fill="#9333ea"/>
-              <rect className="bar b2" x="248" y="128" width="14" height="32" rx="4" fill="#9333ea"/>
-              <rect className="bar b3" x="268" y="115" width="14" height="45" rx="4" fill="#8b2fe8"/>
-              <rect className="bar b4" x="288" y="105" width="14" height="55" rx="4" fill="#7c3aed"/>
-              <rect className="bar b5" x="308" y="98" width="14" height="62" rx="4" fill="url(#g1)"/>
-              <rect className="bar b6" x="328" y="94" width="14" height="66" rx="4" fill="url(#g1)"/>
-              <rect className="bar b7" x="348" y="94" width="14" height="66" rx="4" fill="url(#g1)"/>
-              <rect className="bar b8" x="368" y="98" width="14" height="62" rx="4" fill="url(#g1)"/>
-              <rect className="bar b9" x="388" y="105" width="14" height="55" rx="4" fill="#3b82f6"/>
-              <rect className="bar b10" x="408" y="115" width="14" height="45" rx="4" fill="#3b82f6"/>
-              <rect className="bar b11" x="428" y="128" width="14" height="32" rx="4" fill="#3b82f6"/>
-              <rect className="bar b12" x="448" y="138" width="14" height="22" rx="4" fill="#3b82f6"/>
+              <rect className="land l1" x="170" y="148" width="50" height="12" rx="6" fill="url(#g1)" />
+              <rect className="land l2" x="460" y="148" width="50" height="12" rx="6" fill="url(#g1)" />
+              <rect className="bar b1" x="228" y="138" width="14" height="22" rx="4" fill="#9333ea" />
+              <rect className="bar b2" x="248" y="128" width="14" height="32" rx="4" fill="#9333ea" />
+              <rect className="bar b3" x="268" y="115" width="14" height="45" rx="4" fill="#8b2fe8" />
+              <rect className="bar b4" x="288" y="105" width="14" height="55" rx="4" fill="#7c3aed" />
+              <rect className="bar b5" x="308" y="98" width="14" height="62" rx="4" fill="url(#g1)" />
+              <rect className="bar b6" x="328" y="94" width="14" height="66" rx="4" fill="url(#g1)" />
+              <rect className="bar b7" x="348" y="94" width="14" height="66" rx="4" fill="url(#g1)" />
+              <rect className="bar b8" x="368" y="98" width="14" height="62" rx="4" fill="url(#g1)" />
+              <rect className="bar b9" x="388" y="105" width="14" height="55" rx="4" fill="#3b82f6" />
+              <rect className="bar b10" x="408" y="115" width="14" height="45" rx="4" fill="#3b82f6" />
+              <rect className="bar b11" x="428" y="128" width="14" height="32" rx="4" fill="#3b82f6" />
+              <rect className="bar b12" x="448" y="138" width="14" height="22" rx="4" fill="#3b82f6" />
             </svg>
           </div>
 
-          <div className="inline-flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-full px-4 py-2 mb-8 text-sm text-gray-300 hero-text">
+          <div className="inline-flex items-center gap-2 bg-gray-800 bg-opacity-60 backdrop-blur-sm border border-gray-700 rounded-full px-4 py-2 mb-8 text-sm text-gray-300 hero-text">
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
             AI-Powered English Learning Platform
           </div>
@@ -124,7 +228,7 @@ function Home() {
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white px-8 py-4 rounded-full font-bold text-lg transition"
+              className="border border-gray-600 hover:border-gray-400 bg-gray-900 bg-opacity-50 backdrop-blur-sm text-gray-300 hover:text-white px-8 py-4 rounded-full font-bold text-lg transition"
             >
               Login →
             </button>
@@ -146,7 +250,7 @@ function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-6 max-w-6xl mx-auto">
+      <section className="py-20 px-6 max-w-6xl mx-auto relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4">Everything You Need to
             <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent"> Master English</span>
@@ -163,7 +267,7 @@ function Home() {
             { icon: '🌍', title: 'Built-in Translator', desc: 'Instantly translate between English and 12 languages without leaving the app', color: 'from-green-600 to-green-800' },
             { icon: '💼', title: 'Interview Simulator', desc: 'Practice for 60+ job types with real interview questions and AI feedback', color: 'from-pink-600 to-pink-800' },
           ].map((feature, i) => (
-            <div key={i} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-gray-600 transition group">
+            <div key={i} className="bg-gray-900 bg-opacity-70 backdrop-blur-sm border border-gray-800 rounded-2xl p-6 hover:border-gray-600 transition group">
               <div className={`w-12 h-12 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition`}>
                 {feature.icon}
               </div>
@@ -175,7 +279,7 @@ function Home() {
       </section>
 
       {/* How It Works */}
-      <section className="py-20 px-6 bg-gray-900">
+      <section className="py-20 px-6 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl font-bold mb-4">How It <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Works</span></h2>
           <p className="text-gray-400 mb-16">Get started in minutes</p>
@@ -187,7 +291,7 @@ function Home() {
               { step: '03', title: 'Track Progress', desc: 'See your scores improve and unlock new levels as you get better', icon: '📈' },
             ].map((item, i) => (
               <div key={i}>
-                <div className="bg-gray-800 border border-gray-700 rounded-2xl p-6 text-center">
+                <div className="bg-gray-800 bg-opacity-60 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 text-center">
                   <div className="text-5xl mb-4">{item.icon}</div>
                   <div className="text-purple-400 font-bold text-sm mb-2">STEP {item.step}</div>
                   <h3 className="font-bold text-white text-lg mb-2">{item.title}</h3>
@@ -200,9 +304,9 @@ function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6">
+      <section className="py-20 px-6 relative z-10">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-purple-900 to-blue-900 border border-purple-700 rounded-3xl p-12">
+          <div className="bg-gradient-to-r from-purple-900 to-blue-900 bg-opacity-80 backdrop-blur-sm border border-purple-700 rounded-3xl p-12">
             <h2 className="text-4xl font-bold mb-4">Ready to Build Confidence?</h2>
             <p className="text-gray-300 mb-8 text-lg">Join thousands of learners improving their English every day</p>
             <button
@@ -216,7 +320,7 @@ function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800 py-8 text-center text-gray-500 text-sm">
+      <footer className="border-t border-gray-800 border-opacity-60 py-8 text-center text-gray-500 text-sm relative z-10">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Logo size={16} />
           <span className="font-semibold text-gray-400">BridgeVoice</span>
