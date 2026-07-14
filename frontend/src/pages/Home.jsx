@@ -236,9 +236,9 @@ function Home() {
 
           <div className="flex justify-center gap-8 mt-12 text-center hero-stats">
             {[
-              { number: '10K+', label: 'Active Learners' },
-              { number: '50+', label: 'Practice Scenarios' },
-              { number: '95%', label: 'Success Rate' },
+              { number: '10+', label: 'AI Features' },
+              { number: '6', label: 'Practice Scenarios' },
+              { number: '8', label: 'Languages Supported' },
             ].map((stat, i) => (
               <div key={i}>
                 <p className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">{stat.number}</p>

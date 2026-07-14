@@ -86,12 +86,12 @@ function Dashboard() {
   ]
 
   const scenarios = [
-    { icon: '💼', title: 'Job Interview', desc: 'Practice interview questions', students: '2.3k', path: '/interview' },
-    { icon: '🛒', title: 'Grocery Store', desc: 'Everyday shopping vocabulary', students: '1.8k', path: '/chat' },
-    { icon: '🏥', title: 'Doctor Visit', desc: 'Medical conversations', students: '1.2k', path: '/chat' },
-    { icon: '🏦', title: 'Bank Visit', desc: 'Banking conversations', students: '980', path: '/chat' },
-    { icon: '🏢', title: 'Workplace Chat', desc: 'Professional office talk', students: '1.5k', path: '/chat' },
-    { icon: '🤝', title: 'Making Friends', desc: 'Casual social conversations', students: '2.1k', path: '/chat' },
+    { icon: '💼', title: 'Job Interview', desc: 'Practice interview questions', tag: '💼 Career', path: '/interview' },
+    { icon: '🛒', title: 'Grocery Store', desc: 'Everyday shopping vocabulary', tag: '🛍️ Daily Life', path: '/chat' },
+    { icon: '🏥', title: 'Doctor Visit', desc: 'Medical conversations', tag: '🏥 Healthcare', path: '/chat' },
+    { icon: '🏦', title: 'Bank Visit', desc: 'Banking conversations', tag: '🏦 Finance', path: '/chat' },
+    { icon: '🏢', title: 'Workplace Chat', desc: 'Professional office talk', tag: '🏢 Workplace', path: '/chat' },
+    { icon: '🤝', title: 'Making Friends', desc: 'Casual social conversations', tag: '🤝 Social', path: '/chat' },
   ]
 
   const getLevel = (xp) => {
@@ -216,7 +216,7 @@ function Dashboard() {
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-200 text-xs group-hover:text-white transition">{s.title}</p>
                     <p className="text-gray-600 text-xs mt-0.5 truncate">{s.desc}</p>
-                    <p className="text-purple-500 text-xs mt-1">{s.students} practicing</p>
+                    <p className="text-purple-500 text-xs mt-1">{s.tag}</p>
                   </div>
                 </button>
               ))}
